@@ -6,16 +6,13 @@ import tensorflow as tf
 def _is_composite_array(x):
     if isinstance(x, tf.RaggedTensor):
         return True
-    if ivy.is_ivy_sparse_array(x) or ivy.is_native_sparse_array(x):
-        return True
-    return False
+    return bool(ivy.is_ivy_sparse_array(x) or ivy.is_native_sparse_array(x))
 
 
 def _flatten_composite_array(x):
     if isinstance(x, tf.RaggedTensor):
         new_struc = [x.flat_values]
-        for row_split in x.nested_row_splits:
-            new_struc.append(row_split)
+        new_struc.extend(iter(x.nested_row_splits))
         return new_struc
     elif ivy.is_ivy_sparse_array(x) or ivy.is_native_sparse_array(x):
         return ivy.native_sparse_array_to_indices_values_and_shape(x)

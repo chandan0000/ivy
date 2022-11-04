@@ -88,9 +88,7 @@ def conv2d(
     if data_format == "NCHW":
         x = tf.transpose(x, (0, 2, 3, 1))
     res = tf.nn.conv2d(x, filters, strides, padding, "NHWC", dilations)
-    if data_format == "NCHW":
-        return tf.transpose(res, (0, 3, 1, 2))
-    return res
+    return tf.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 @with_unsupported_dtypes({"2.9.1 and below": ("bfloat16",)}, backend_version)
@@ -132,9 +130,7 @@ def conv2d_transpose(
     res = tf.nn.conv2d_transpose(
         x, filters, output_shape, strides, padding, "NHWC", dilations
     )
-    if data_format == "NCHW":
-        return tf.transpose(res, (0, 3, 1, 2))
-    return res
+    return tf.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 @with_unsupported_dtypes({"2.9.1 and below": ("bfloat16",)}, backend_version)
@@ -165,13 +161,10 @@ def depthwise_conv2d(
     if data_format == "NCHW":
         x = tf.transpose(x, (0, 2, 3, 1))
     res = tf.nn.depthwise_conv2d(x, filters, strides, padding, "NHWC", dilations)
-    if data_format == "NCHW":
-        return tf.transpose(res, (0, 3, 1, 2))
-    return res
+    return tf.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 @with_unsupported_devices({"2.9.1 and below": ("cpu",)}, backend_version)
-# noinspection PyDefaultArgument
 def conv3d(
     x,
     filters,
@@ -190,9 +183,7 @@ def conv3d(
     if data_format == "NCDHW":
         x = tf.transpose(x, (0, 2, 3, 4, 1))
     res = tf.nn.conv3d(x, filters, strides, padding, "NDHWC", dilations)
-    if data_format == "NCDHW":
-        return tf.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return tf.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res
 
 
 @with_unsupported_dtypes({"2.9.1 and below": ("bfloat16",)}, backend_version)
@@ -244,9 +235,7 @@ def conv3d_transpose(
     res = tf.nn.conv3d_transpose(
         x, filters, output_shape, strides, padding, "NDHWC", dilations
     )
-    if data_format == "NCDHW":
-        return tf.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return tf.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res
 
 
 @with_unsupported_dtypes({"2.9.1 and below": ("bfloat16",)}, backend_version)
@@ -281,7 +270,7 @@ def conv_general_dilated(
     if dims == 1:
         permute_list = [2]
     else:
-        permute_list = [i for i in range(3, dims + 2)]
+        permute_list = list(range(3, dims + 2))
         permute_list += [2]
     x = tf.transpose(x, (0, dims + 1, *range(1, dims + 1)))
     for i in range(dims):

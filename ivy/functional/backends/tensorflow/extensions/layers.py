@@ -38,9 +38,7 @@ def max_pool2d(
     if data_format == "NCHW":
         x = tf.transpose(x, (0, 2, 3, 1))
     res = tf.nn.max_pool2d(x, kernel, strides, padding)
-    if data_format == "NCHW":
-        return tf.transpose(res, (0, 3, 1, 2))
-    return res
+    return tf.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 def max_pool1d(
@@ -71,14 +69,15 @@ def kaiser_window(
     dtype: Optional[tf.DType] = None,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if periodic is False:
-        return tf.signal.kaiser_window(
+    return (
+        tf.signal.kaiser_window(
+            window_length + 1, beta, dtype=dtype, name=None
+        )[:-1]
+        if periodic
+        else tf.signal.kaiser_window(
             window_length, beta, dtype=tf.dtypes.float32, name=None
         )
-    else:
-        return tf.signal.kaiser_window(window_length + 1, beta, dtype=dtype, name=None)[
-            :-1
-        ]
+    )
 
 
 def kaiser_bessel_derived_window(
@@ -89,7 +88,7 @@ def kaiser_bessel_derived_window(
     dtype: Optional[tf.DType] = None,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if periodic is True:
+    if periodic:
         return tf.signal.kaiser_bessel_derived_window(
             window_length + 1, beta, dtype, name=None
         )[:-1]
@@ -116,9 +115,7 @@ def max_pool3d(
     if data_format == "NCDHW":
         x = tf.transpose(x, (0, 2, 3, 4, 1))
     res = tf.nn.max_pool3d(x, kernel, strides, padding)
-    if data_format == "NCDHW":
-        return tf.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return tf.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res
 
 
 @with_unsupported_dtypes({"2.9.1 and below":
@@ -138,6 +135,4 @@ def avg_pool3d(
     if data_format == "NCDHW":
         x = tf.transpose(x, (0, 2, 3, 4, 1))
     res = tf.nn.avg_pool3d(x, kernel, strides, padding)
-    if data_format == "NCDHW":
-        return tf.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return tf.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res

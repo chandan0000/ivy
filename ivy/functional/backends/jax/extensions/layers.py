@@ -17,11 +17,12 @@ def vorbis_window(
         [
             round(
                 math.sin(
-                    (ivy.pi / 2) * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
+                    (ivy.pi / 2)
+                    * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
                 ),
                 8,
             )
-            for i in range(1, window_length * 2)[0::2]
+            for i in range(1, window_length * 2)[::2]
         ],
         dtype=dtype,
     )
@@ -68,8 +69,9 @@ def _pool(inputs, init, reduce_fn, window_shape, strides, padding):
             f"window_shape {window_shape}"
         )
         assert all(
-            [len(x) == 2 for x in padding]
+            len(x) == 2 for x in padding
         ), f"each entry in padding {padding} must be length 2"
+
         padding = ((0, 0),) + padding + ((0, 0),)
     y = jlax.reduce_window(inputs, init, reduce_fn, dims, strides, padding)
     if is_single_input:
@@ -92,10 +94,7 @@ def max_pool2d(
 
     res = _pool(x, -jnp.inf, jlax.max, kernel, strides, padding)
 
-    if data_format == "NCHW":
-        return jnp.transpose(res, (0, 3, 1, 2))
-
-    return res
+    return jnp.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 def max_pool1d(
@@ -136,10 +135,11 @@ def kaiser_window(
     dtype: Optional[jnp.dtype] = None,
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
-    if periodic is False:
-        return jnp.array(jnp.kaiser(M=window_length, beta=beta), dtype=dtype)
-    else:
-        return jnp.array(jnp.kaiser(M=window_length + 1, beta=beta)[:-1], dtype=dtype)
+    return (
+        jnp.array(jnp.kaiser(M=window_length + 1, beta=beta)[:-1], dtype=dtype)
+        if periodic
+        else jnp.array(jnp.kaiser(M=window_length, beta=beta), dtype=dtype)
+    )
 
 
 def _flat_array_to_1_dim_array(x):

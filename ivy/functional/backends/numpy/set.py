@@ -30,9 +30,6 @@ def unique_all(
         nan_idx = np.where(np.isnan(x.flatten()))[0]
 
         indices = np.concatenate((indices[:-1], nan_idx), axis=0)
-    else:
-        pass
-
     return Results(
         values.astype(x.dtype),
         indices,

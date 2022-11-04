@@ -11,10 +11,14 @@ def load_labels():
 
 
 def targeted_labels_in_main_issue(accepted_labels, main_issue_labels):
-    for key, labels in accepted_labels["Determine_Labels"].items():
-        if labels == main_issue_labels:
-            return key
-    return False
+    return next(
+        (
+            key
+            for key, labels in accepted_labels["Determine_Labels"].items()
+            if labels == main_issue_labels
+        ),
+        False,
+    )
 
 
 def set_child_issue_labels(key, accepted_labels):
@@ -32,9 +36,9 @@ def main():
     non_alocate_functions = main_issue.main_issue_body_functions(allocated=False)
 
     accepted_labels = load_labels()
-    targeted_labels = targeted_labels_in_main_issue(accepted_labels, main_issue_labels)
-
-    if targeted_labels:
+    if targeted_labels := targeted_labels_in_main_issue(
+        accepted_labels, main_issue_labels
+    ):
         if issue_in_cmt:
             comment_issue_id = int(issue_id[1:])
             comment_issue_title = main_issue.child_issue_title(issue_id)
@@ -57,10 +61,7 @@ def main():
                     f'gh issue edit {main_issue.get_issue_number()} --body "{main_issue_body}"',
                     save_output=False,
                 )
-                main_issue.delete_comment()
-            elif (comment_issue_title not in non_alocate_functions) and (
-                comment_issue_id not in alocate_functions
-            ):
+            elif comment_issue_id not in alocate_functions:
                 print("Function already allocated, closing issue.")
                 main_issue.command(
                     f'gh issue comment {comment_issue_id} --body "This issue is being closed because the function has already been taken, please choose another function and recommend on the main issue."',
@@ -69,14 +70,12 @@ def main():
                 main_issue.command(
                     f"gh issue close {comment_issue_id}", save_output=False
                 )
-                main_issue.delete_comment()
-            elif comment_issue_id in alocate_functions:
+            else:
                 print("Issue ID already in use...")
-                main_issue.delete_comment()
         else:
             # ToDo: Delete comment
             print("Deleting comment! No issue found.")
-            main_issue.delete_comment()
+        main_issue.delete_comment()
     else:
         print("Skipping step")
 

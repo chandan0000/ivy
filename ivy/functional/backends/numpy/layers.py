@@ -11,10 +11,7 @@ import ivy
 
 def _add_dilations(x, dilations, axis):
     return np.insert(
-        x,
-        [i for i in range(1, x.shape[axis])] * (dilations - 1),
-        values=0,
-        axis=axis,
+        x, list(range(1, x.shape[axis])) * (dilations - 1), values=0, axis=axis
     )
 
 
@@ -131,7 +128,7 @@ def conv2d(
     if dilations[0] > 1:
         filters = _add_dilations(filters, dilations[0], axis=0)
 
-    filter_shape = list(filters.shape[0:2])
+    filter_shape = list(filters.shape[:2])
     if data_format == "NCHW":
         x = np.transpose(x, (0, 2, 3, 1))
 
@@ -177,9 +174,7 @@ def conv2d(
     )
     # B x OH x OW x O
     res = np.sum(mult, (3, 4, 5))
-    if data_format == "NCHW":
-        return np.transpose(res, (0, 3, 1, 2))
-    return res
+    return np.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 def conv2d_transpose(
@@ -322,7 +317,7 @@ def conv3d(
     if dilations[2] > 1:
         filters = _add_dilations(filters, dilations[2], axis=2)
 
-    filter_shape = list(filters.shape[0:3])
+    filter_shape = list(filters.shape[:3])
 
     if data_format == "NCDHW":
         x = np.transpose(x, (0, 2, 3, 4, 1))
@@ -375,9 +370,7 @@ def conv3d(
     )
     # B x OD X OH x OW x O
     res = np.sum(mult, (4, 5, 6, 7))
-    if data_format == "NCDHW":
-        return np.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return np.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res
 
 
 def conv3d_transpose(
@@ -493,7 +486,7 @@ def conv_general_dilated(
         if x_dilations[j] > 1:
             x = _add_dilations(x, x_dilations[j], axis=j + 1)
 
-    filter_shape = list(filters.shape[0:dims])
+    filter_shape = list(filters.shape[:dims])
 
     x_shape = list(x.shape[1 : dims + 1])
     pad_specific = [
@@ -550,7 +543,7 @@ def conv_general_dilated(
         )
 
         # B x OH x OW x O
-        res.append(np.sum(mult, tuple([i for i in range(dims + 1, dims * 2 + 2)])))
+        res.append(np.sum(mult, tuple(list(range(dims + 1, dims * 2 + 2)))))
     res = np.concatenate(res, axis=-1)
 
     if data_format == "channel_first":

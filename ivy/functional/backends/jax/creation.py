@@ -58,11 +58,10 @@ def asarray(
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
     if isinstance(obj, ivy.NativeArray) and not dtype:
-        if copy is True:
-            dtype = obj.dtype
-            return _to_device(jnp.array(obj, dtype=dtype, copy=True), device=device)
-        else:
+        if copy is not True:
             return _to_device(obj, device=device)
+        dtype = obj.dtype
+        return _to_device(jnp.array(obj, dtype=dtype, copy=True), device=device)
     elif isinstance(obj, (list, tuple, dict)) and len(obj) != 0 and dtype is None:
         dtype = ivy.default_dtype(item=obj, as_native=True)
         if copy is True:
@@ -338,11 +337,7 @@ def one_hot(
         if on_none and off_none:
             dtype = jnp.float32
         else:
-            if not on_none:
-                dtype = jnp.array(on_value).dtype
-            elif not off_none:
-                dtype = jnp.array(off_value).dtype
-
+            dtype = jnp.array(off_value).dtype if on_none else jnp.array(on_value).dtype
     res = jnp.eye(depth, dtype=dtype)[jnp.array(indices, dtype="int64").reshape(-1)]
     res = res.reshape(list(indices.shape) + [depth])
 

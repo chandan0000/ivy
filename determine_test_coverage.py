@@ -8,8 +8,6 @@ import bz2
 import _pickle as cPickle
 
 
-# Shared Map
-tests = {}
 BACKENDS = ["numpy", "jax", "tensorflow", "torch"]
 
 os.system("git config --global --add safe.directory /ivy")
@@ -37,16 +35,14 @@ with open("test_names") as f:
 shuffle(test_names_without_backend)
 for test_name in test_names_without_backend:
     for backend in BACKENDS:
-        test_backend = test_name + "," + backend
+        test_backend = f"{test_name},{backend}"
         test_names.append(test_backend)
 
 
-# Create a Dictionary of Test Names to Index
-tests["index_mapping"] = test_names
-tests["tests_mapping"] = {}
-for i in range(len(test_names)):
-    tests["tests_mapping"][test_names[i]] = i
-
+tests = {
+    "index_mapping": test_names,
+    "tests_mapping": {test_names[i]: i for i in range(len(test_names))},
+}
 
 directories = [
     "ivy",
@@ -107,20 +103,18 @@ if __name__ == "__main__":
         for directory in directories:
             for file_name in os.listdir(directory):
                 if file_name.endswith("cover"):
-                    file_name = directory + "/" + file_name
+                    file_name = f"{directory}/{file_name}"
                     if file_name not in tests:
                         tests[file_name] = []
                         with open(file_name) as f:
-                            for line in f:
+                            for _ in f:
                                 tests[file_name].append(set())
                     with open(file_name) as f:
-                        i = 0
-                        for line in f:
+                        for i, line in enumerate(f):
                             if line[0] == ">":
                                 tests[file_name][i].add(
                                     tests["tests_mapping"][test_backend]
                                 )
-                            i += 1
         os.system("find . -name \\*cover -type f -delete")
 
 

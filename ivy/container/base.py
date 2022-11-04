@@ -127,14 +127,11 @@ class ContainerBase(dict, abc.ABC):
                     "list_join": self.list_join,
                     "concat": lambda conts: self.concat(conts, 0),
                 }[self._container_combine_method]
-            self._loaded_containers_from_queues = dict()
+            self._loaded_containers_from_queues = {}
             self._queue_load_sizes_cum = np.cumsum(queue_load_sizes)
             self._queue_timeout = ivy.default(queue_timeout, ivy.get_queue_timeout())
         if dict_in is None:
-            if kwargs:
-                dict_in = dict(**kwargs)
-            else:
-                dict_in = dict()
+            dict_in = dict(**kwargs) if kwargs else {}
         elif kwargs:
             raise ivy.exceptions.IvyException(
                 "dict_in and **kwargs cannot both be specified for ivy.Container "
@@ -152,7 +149,7 @@ class ContainerBase(dict, abc.ABC):
             types_to_iteratively_nest=types_to_iteratively_nest,
             alphabetical_keys=alphabetical_keys,
         )
-        self._config = dict()
+        self._config = {}
         self.cont_inplace_update(dict_in, **self._config_in)
 
     # Class Methods #
@@ -204,10 +201,7 @@ class ContainerBase(dict, abc.ABC):
             kwarg_vals = vals[num_arg_conts:]
             kw = ivy.copy_nest(kwargs, to_mutable=True)
             ivy.set_nest_at_indices(kw, kwarg_cont_idxs, kwarg_vals)
-            if with_out:
-                return fn(*a, out=out, **kw)
-            else:
-                return fn(*a, **kw)
+            return fn(*a, out=out, **kw) if with_out else fn(*a, **kw)
 
         # Replace each container in arg and kwarg with the arrays at the leaf
         # levels of that container using map_fn and call fn using those arrays
@@ -275,16 +269,13 @@ class ContainerBase(dict, abc.ABC):
         if not ivy.exists(config):
             config = container0.config if isinstance(container0, ivy.Container) else {}
 
-        if isinstance(container0, ivy.Container):
-            return_dict = dict()
-            for key in container0.keys():
-                new_list = list()
-                for container in containers:
-                    new_list.append(container[key])
-                return_dict[key] = ivy.Container.list_join(new_list, config)
-            return ivy.Container(return_dict, **config)
-        else:
+        if not isinstance(container0, ivy.Container):
             return [item for sublist in containers for item in sublist]
+        return_dict = {}
+        for key in container0.keys():
+            new_list = [container[key] for container in containers]
+            return_dict[key] = ivy.Container.list_join(new_list, config)
+        return ivy.Container(return_dict, **config)
 
     @staticmethod
     def list_stack(containers, dim, config=None):
@@ -309,11 +300,13 @@ class ContainerBase(dict, abc.ABC):
             config = container0.config if isinstance(container0, ivy.Container) else {}
 
         if isinstance(container0, ivy.Container):
-            return_dict = dict()
-            for key in container0.keys():
-                return_dict[key] = ivy.Container.list_stack(
+            return_dict = {
+                key: ivy.Container.list_stack(
                     [container[key] for container in containers], dim, config
                 )
+                for key in container0.keys()
+            }
+
             return ivy.Container(return_dict, **config)
         else:
             return containers
@@ -327,7 +320,7 @@ class ContainerBase(dict, abc.ABC):
     @staticmethod
     def _sum_unify(containers, device, _=None, _1=None):
         return sum(
-            [cont.to_device(device) for cont in containers.values()],
+            (cont.to_device(device) for cont in containers.values()),
             start=ivy.zeros([]),
         )
 
@@ -400,14 +393,13 @@ class ContainerBase(dict, abc.ABC):
 
         # otherwise, check that the keys are aligned between each container, and apply
         # this method recursively
-        return_dict = dict()
-        all_keys = set(
-            [
-                item
-                for sublist in [list(cont.keys()) for cont in containers]
-                for item in sublist
-            ]
-        )
+        return_dict = {}
+        all_keys = {
+            item
+            for sublist in [list(cont.keys()) for cont in containers]
+            for item in sublist
+        }
+
         for key in all_keys:
             keys_present = [key in cont for cont in containers]
             return_dict[key] = ivy.Container.combine(
@@ -480,16 +472,14 @@ class ContainerBase(dict, abc.ABC):
                 equal_mat = ivy.logical_and(equal_mat, shape_equal_mat)
             # noinspection PyTypeChecker
             if ivy.min(ivy.astype(equal_mat, "int32")) == 1:
-                if mode == "diff_only":
-                    return ivy.Container(**config)
-                return container0
+                return ivy.Container(**config) if mode == "diff_only" else container0
             elif mode == "same_only":
                 return ivy.Container(**config)
             else:
                 cont_range = range(num_containers)
-                diff_dict = dict()
+                diff_dict = {}
                 cont_dict = dict(zip(cont_range, containers))
-                idxs_added = list()
+                idxs_added = []
                 for idx in cont_range:
                     if idx not in idxs_added:
                         idxs_to_add = ivy.argwhere(equal_mat[idx])
@@ -497,30 +487,27 @@ class ContainerBase(dict, abc.ABC):
                             ivy.to_numpy(idxs_to_add).reshape(-1).tolist()
                         )
                         if isinstance(diff_keys, str):
-                            key = diff_keys + "_" + str(idxs_to_add_list)[1:-1]
+                            key = f"{diff_keys}_{str(idxs_to_add_list)[1:-1]}"
                         elif isinstance(diff_keys, (list, tuple)):
                             key = diff_keys[idx]
                         else:
                             raise ivy.exceptions.IvyException(
-                                "diff_keys must be either a string or list of strings,"
-                                "but found {} of type {}".format(
-                                    diff_keys, type(diff_keys)
-                                )
+                                f"diff_keys must be either a string or list of strings,but found {diff_keys} of type {type(diff_keys)}"
                             )
+
                         diff_dict[key] = cont_dict[idx]
                         idxs_added += idxs_to_add_list
                 return ivy.Container(diff_dict, **config)
 
         # otherwise, check that the keys are aligned between each container, and apply
         # this method recursively
-        return_dict = dict()
-        all_keys = set(
-            [
-                item
-                for sublist in [list(cont.keys()) for cont in containers]
-                for item in sublist
-            ]
-        )
+        return_dict = {}
+        all_keys = {
+            item
+            for sublist in [list(cont.keys()) for cont in containers]
+            for item in sublist
+        }
+
         for key in all_keys:
             keys_present = [key in cont for cont in containers]
             all_keys_present = sum(keys_present) == num_containers
@@ -541,21 +528,18 @@ class ContainerBase(dict, abc.ABC):
                 if mode == "all":
                     return_dict[key] = containers[keys_present.index(True)][key]
                 continue
-            diff_dict = dict()
+            diff_dict = {}
             for i, (key_present, cont) in enumerate(zip(keys_present, containers)):
-                if detect_key_diffs:
-                    if key_present and mode != "same_only":
-                        if isinstance(diff_keys, str):
-                            diff_dict[diff_keys + "_" + str(i)] = cont[key]
-                        elif isinstance(diff_keys, (list, tuple)):
-                            diff_dict[diff_keys[i]] = cont[key]
-                        else:
-                            raise ivy.exceptions.IvyException(
-                                "diff_keys must be either a string or list of strings,"
-                                "but found {} of type {}".format(
-                                    diff_keys, type(diff_keys)
-                                )
-                            )
+                if detect_key_diffs and key_present and mode != "same_only":
+                    if isinstance(diff_keys, str):
+                        diff_dict[f"{diff_keys}_{str(i)}"] = cont[key]
+                    elif isinstance(diff_keys, (list, tuple)):
+                        diff_dict[diff_keys[i]] = cont[key]
+                    else:
+                        raise ivy.exceptions.IvyException(
+                            f"diff_keys must be either a string or list of strings,but found {diff_keys} of type {type(diff_keys)}"
+                        )
+
             if diff_dict:
                 return_dict[key] = diff_dict
         return ivy.Container(return_dict, **config)
@@ -654,69 +638,65 @@ class ContainerBase(dict, abc.ABC):
             Container
 
         """
-        container0 = None
-        for cont in containers:
-            if isinstance(cont, ivy.Container):
-                container0 = cont
-                break
+        container0 = next(
+            (cont for cont in containers if isinstance(cont, ivy.Container)), None
+        )
+
         ivy.assertions.check_exists(
             container0,
             message="No containers found in the inputs to ivy.Container.multi_map",
         )
         if not ivy.exists(config):
             config = container0.config if isinstance(container0, ivy.Container) else {}
-        return_dict = dict()
+        return_dict = {}
         for key in container0.keys():
             values = [
                 cont[key] if isinstance(cont, ivy.Container) and key in cont else cont
                 for cont in containers
             ]
             value0 = values[0]
-            this_key_chain = key if key_chain == "" else (key_chain + "/" + key)
+            this_key_chain = key if key_chain == "" else f"{key_chain}/{key}"
             is_container = [ivy.is_ivy_container(x) for x in values]
             if not assert_identical and not all(is_container) and any(is_container):
-                if key_chains is not None:
-                    if (this_key_chain in key_chains and not to_apply) or (
-                        this_key_chain not in key_chains and to_apply
-                    ):
-                        if prune_unapplied:
-                            continue
-                        return_dict[key] = value0
+                if key_chains is not None and (
+                    (this_key_chain in key_chains and not to_apply)
+                    or (this_key_chain not in key_chains and to_apply)
+                ):
+                    if prune_unapplied:
                         continue
+                    return_dict[key] = value0
+                    continue
                 return_dict[key] = func(values, this_key_chain)
-            else:
-                if isinstance(value0, ivy.Container):
-                    ret = ivy.Container.multi_map(
-                        func,
-                        values,
-                        key_chains,
-                        to_apply,
-                        prune_unapplied,
-                        this_key_chain,
-                        config,
-                        map_nests,
-                        assert_identical,
-                    )
-                    if ret:
-                        return_dict[key] = ret
-                elif any(isinstance(x, (list, tuple)) for x in values) and map_nests:
-                    ret = ivy.nested_multi_map(
-                        lambda x, _: func(x, None), values, to_ivy=False
-                    )
-                    if prune_unapplied and not ret:
-                        continue
+            elif isinstance(value0, ivy.Container):
+                if ret := ivy.Container.multi_map(
+                    func,
+                    values,
+                    key_chains,
+                    to_apply,
+                    prune_unapplied,
+                    this_key_chain,
+                    config,
+                    map_nests,
+                    assert_identical,
+                ):
                     return_dict[key] = ret
-                else:
-                    if key_chains is not None:
-                        if (this_key_chain in key_chains and not to_apply) or (
-                            this_key_chain not in key_chains and to_apply
-                        ):
-                            if prune_unapplied:
-                                continue
-                            return_dict[key] = value0
-                            continue
-                    return_dict[key] = func(values, this_key_chain)
-            # noinspection PyProtectedMember
+            elif any(isinstance(x, (list, tuple)) for x in values) and map_nests:
+                ret = ivy.nested_multi_map(
+                    lambda x, _: func(x, None), values, to_ivy=False
+                )
+                if not prune_unapplied or ret:
+                    return_dict[key] = ret
+            else:
+                if key_chains is not None and (
+                    (this_key_chain in key_chains and not to_apply)
+                    or (this_key_chain not in key_chains and to_apply)
+                ):
+                    if prune_unapplied:
+                        continue
+                    return_dict[key] = value0
+                    continue
+                return_dict[key] = func(values, this_key_chain)
+                # noinspection PyProtectedMember
         return ivy.Container(return_dict, **config)
 
     @staticmethod

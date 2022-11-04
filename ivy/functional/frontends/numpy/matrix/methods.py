@@ -102,7 +102,7 @@ class matrix:
             else ivy.to_numpy(self._data)
         )
         with np.printoptions(precision=dec_vals):
-            return "ivy.matrix(" + str(self._data.to_list()) + ")"
+            return f"ivy.matrix({str(self._data.to_list())})"
 
     # Instance Methods #
     # ---------------- #

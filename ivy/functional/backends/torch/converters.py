@@ -73,9 +73,9 @@ class IvyModule(ivy.Module):
                     native.__setattr__(k, v.data)
             else:
                 raise ivy.exceptions.IvyException(
-                    "found item in variable container {} which was neither a "
-                    "sub ivy.Container nor a variable.".format(v)
+                    f"found item in variable container {v} which was neither a sub ivy.Container nor a variable."
                 )
+
         return native
 
     def _forward(self, *a, **kw):

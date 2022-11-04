@@ -172,7 +172,7 @@ extra_promotion_table = {
 }
 
 # tensorflow data type promotion
-tensorflow_promotion_table = {**standard_promotion_table, **extra_promotion_table}
+tensorflow_promotion_table = standard_promotion_table | extra_promotion_table
 
 
 @handle_exceptions

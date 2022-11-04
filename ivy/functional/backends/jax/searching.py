@@ -36,17 +36,17 @@ def argmin(
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
     ret = jnp.argmin(x, axis=axis, keepdims=keepdims)
-    # The returned array must have the default array index data type.
     if dtype is not None:
-        if dtype not in (jnp.int32, jnp.int64):
-            return jnp.array(ret, dtype=jnp.int32)
-        else:
-            return jnp.array(ret, dtype=dtype)
+        return (
+            jnp.array(ret, dtype=jnp.int32)
+            if dtype not in (jnp.int32, jnp.int64)
+            else jnp.array(ret, dtype=dtype)
+        )
+
+    if ret.dtype not in (jnp.int32, jnp.int64):
+        return jnp.array(ret, dtype=jnp.int32)
     else:
-        if ret.dtype not in (jnp.int32, jnp.int64):
-            return jnp.array(ret, dtype=jnp.int32)
-        else:
-            return jnp.array(ret, dtype=ret.dtype)
+        return jnp.array(ret, dtype=ret.dtype)
 
 
 def nonzero(
@@ -59,10 +59,7 @@ def nonzero(
 ) -> Union[JaxArray, Tuple[JaxArray]]:
     res = jnp.nonzero(x, size=size, fill_value=fill_value)
 
-    if as_tuple:
-        return tuple(res)
-
-    return jnp.stack(res, axis=1)
+    return tuple(res) if as_tuple else jnp.stack(res, axis=1)
 
 
 def where(

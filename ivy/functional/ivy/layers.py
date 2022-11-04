@@ -156,9 +156,7 @@ def linear(
         # OBS x IBS x OF
         y = y + bias_broadcast
 
-    if ivy.exists(out):
-        return ivy.inplace_update(out, y)
-    return y
+    return ivy.inplace_update(out, y) if ivy.exists(out) else y
 
 
 # Dropout #
@@ -204,9 +202,7 @@ def dropout(
     )
     if scale:
         x = ivy.multiply(x, 1 / (1 - prob), out=out)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, x)
-    return x
+    return ivy.inplace_update(out, x) if ivy.exists(out) else x
 
 
 # Attention #
@@ -565,9 +561,7 @@ def multi_head_attention(
 
     # BS x Q x OF
     ret = to_out_fn(sdpa, v=to_out_v) if ivy.exists(to_out_fn) else sdpa
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 # Convolutions #
@@ -1376,21 +1370,7 @@ def conv(
     dilations: Union[int, Tuple[int], Tuple[int, int], Tuple[int, int, int]] = 1,
     out: Optional[ivy.Array] = None,
 ) -> ivy.Array:
-    if transpose:
-        assert x_dilations == 1, "x_dilations must be 1 for transpose convolutions."
-        return conv_general_transpose(
-            x,
-            filters,
-            strides,
-            padding,
-            dims=dims,
-            output_shape=output_shape,
-            data_format=data_format,
-            dilations=dilations,
-            feature_group_count=feature_group_count,
-            out=out,
-        )
-    else:
+    if not transpose:
         return conv_general_dilated(
             x,
             filters,
@@ -1403,6 +1383,19 @@ def conv(
             dilations=dilations,
             out=out,
         )
+    assert x_dilations == 1, "x_dilations must be 1 for transpose convolutions."
+    return conv_general_transpose(
+        x,
+        filters,
+        strides,
+        padding,
+        dims=dims,
+        output_shape=output_shape,
+        data_format=data_format,
+        dilations=dilations,
+        feature_group_count=feature_group_count,
+        out=out,
+    )
 
 
 # LSTM #
@@ -1470,7 +1463,7 @@ def lstm_update(
     ct = init_c
 
     # lstm outputs
-    hts_list = list()
+    hts_list = []
 
     # unrolled time dimension with lstm steps
     for Wii_xt, Wif_xt, Wig_xt, Wio_xt in zip(
@@ -1506,13 +1499,14 @@ def lstm_update(
 
 def handle_padding(x, strides, filters, padding):
     if padding == "SAME":
-        if x % strides == 0:
-            pad = max(filters - strides, 0)
-        else:
-            pad = max(filters - (x % strides), 0)
+        return (
+            max(filters - strides, 0)
+            if x % strides == 0
+            else max(filters - (x % strides), 0)
+        )
+
     else:
-        pad = 0
-    return pad
+        return 0
 
 
 def deconv_length(dim_size, stride_size, kernel_size, padding, dilation=1):
@@ -1526,17 +1520,8 @@ def deconv_length(dim_size, stride_size, kernel_size, padding, dilation=1):
 
 def get_x_data_format(dims: int = 2, data_format: str = "channel_first"):
     if dims == 1:
-        if data_format == "channel_first":
-            return "NCW"
-        else:
-            return "NWC"
-    if dims == 2:
-        if data_format == "channel_first":
-            return "NCHW"
-        else:
-            return "NHWC"
+        return "NCW" if data_format == "channel_first" else "NWC"
+    elif dims == 2:
+        return "NCHW" if data_format == "channel_first" else "NHWC"
     elif dims == 3:
-        if data_format == "channel_first":
-            return "NCDHW"
-        else:
-            return "NDHWC"
+        return "NCDHW" if data_format == "channel_first" else "NDHWC"

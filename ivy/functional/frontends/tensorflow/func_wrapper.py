@@ -10,9 +10,7 @@ import ivy.functional.frontends.tensorflow as frontend
 
 
 def tensorflow_array_to_ivy(x):
-    if isinstance(x, frontend.EagerTensor):
-        return x.data
-    return x
+    return x.data if isinstance(x, frontend.EagerTensor) else x
 
 
 def ivy_array_to_tensorflow(x):

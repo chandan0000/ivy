@@ -10,9 +10,7 @@ from ivy.func_wrapper import with_unsupported_dtypes
 @to_ivy_arrays_and_back
 def norm(x, ord=None, axis=None, keepdims=False):
     ret = ivy.vector_norm(x, axis, keepdims, ord)
-    if axis is None:
-        return ret[0]
-    return ret
+    return ret[0] if axis is None else ret
 
 
 # matrix_rank

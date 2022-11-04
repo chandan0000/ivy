@@ -18,9 +18,7 @@ from ivy.functional.ivy.gradients import (
 
 
 def variable(x):
-    if not x.is_leaf:
-        return x.detach().requires_grad_()
-    return x.clone().requires_grad_()
+    return x.clone().requires_grad_() if x.is_leaf else x.detach().requires_grad_()
 
 
 def is_variable(x, /, *, exclusive: bool = False):
@@ -36,18 +34,16 @@ def _forward_fn(xs, func):
     ret = func(xs)
 
     if isinstance(ret, ivy.Array):
-        array_values = ret.to_native()
-    else:
-        array_idxs = ivy.nested_argwhere(ret, lambda x: ivy.is_native_array(x))
+        return ret.to_native()
+    array_idxs = ivy.nested_argwhere(ret, lambda x: ivy.is_native_array(x))
+    return (
+        []
         if (
             not isinstance(array_idxs, list)
             or np.asarray(array_idxs, "object").size == 0
-        ):
-            array_values = []
-        else:
-            array_values = ivy.multi_index_nest(ret, array_idxs)
-
-    return array_values
+        )
+        else ivy.multi_index_nest(ret, array_idxs)
+    )
 
 
 # noinspection PyShadowingNames
@@ -177,10 +173,9 @@ def stop_gradient(
 
 def jac(func: Callable):
     grad_fn = lambda x_in: ivy.to_native(func(x_in))
-    callback_fn = lambda x_in: ivy.to_ivy(
+    return lambda x_in: ivy.to_ivy(
         torch.autograd.functional.jacobian(grad_fn, ivy.to_native(x_in))
     )
-    return callback_fn
 
 
 def grad(func: Callable):

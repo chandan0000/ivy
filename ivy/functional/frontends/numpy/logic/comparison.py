@@ -36,9 +36,11 @@ def array_equal(a1, a2, equal_nan=False):
     if not equal_nan:
         return ivy.array(ivy.array_equal(a1, a2))
     a1nan, a2nan = ivy.isnan(a1), ivy.isnan(a2)
-    if not (a1nan == a2nan).all():
-        return False
-    return ivy.array(ivy.array_equal(a1[~a1nan], a2[~a2nan]))
+    return (
+        ivy.array(ivy.array_equal(a1[~a1nan], a2[~a2nan]))
+        if (a1nan == a2nan).all()
+        else False
+    )
 
 
 @handle_numpy_casting

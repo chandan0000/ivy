@@ -14,7 +14,7 @@ def _is_optional(typ):
         ):
             return True
     except BaseException as error:
-        print("Exception occured: {}".format(error))
+        print(f"Exception occured: {error}")
     return False
 
 
@@ -25,7 +25,7 @@ def _is_union(typ):
         if rep.startswith("Union"):
             return True
     except BaseException as error:
-        print("Exception occured: {}".format(error))
+        print(f"Exception occured: {error}")
     return False
 
 
@@ -36,7 +36,7 @@ def _is_dict(typ):
         if rep.startswith("Dict"):
             return True
     except BaseException as error:
-        print("Exception occured: {}".format(error))
+        print(f"Exception occured: {error}")
     return False
 
 
@@ -47,7 +47,7 @@ def _is_iterable(typ):
         if rep.startswith("List") or rep.startswith("Tuple"):
             return True
     except BaseException as error:
-        print("Exception occured: {}".format(error))
+        print(f"Exception occured: {error}")
     return False
 
 
@@ -62,8 +62,8 @@ def _correct_index(is_opt, is_dict, is_iter):
 
 
 def _get_array_idxs(typ, idx_so_far=None):
-    idx_so_far = ivy.default(idx_so_far, list())
-    these_idxs = list()
+    idx_so_far = ivy.default(idx_so_far, [])
+    these_idxs = []
     if not hasattr(typ, "__args__"):
         return these_idxs
     is_opt = _is_optional(typ)
@@ -104,7 +104,7 @@ def fn_array_spec(fn):
 
     """
     type_hints = get_type_hints(fn)
-    array_idxs = list()
+    array_idxs = []
     for i, (k, v) in enumerate(type_hints.items()):
         a_idxs = _get_array_idxs(v)
         if not a_idxs:

@@ -154,9 +154,8 @@ def nan_to_num(
     ret = tf.where(tf.math.logical_and(tf.math.is_inf(ret), ret < 0), neginf, ret)
     if copy:
         return ret
-    else:
-        x = ret
-        return x
+    x = ret
+    return x
 
     
 @with_unsupported_dtypes(

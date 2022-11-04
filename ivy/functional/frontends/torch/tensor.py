@@ -6,12 +6,10 @@ import ivy.functional.frontends.torch as torch_frontend
 
 class Tensor:
     def __init__(self, data):
-        self.data = ivy.array(data) if not isinstance(data, ivy.Array) else data
+        self.data = data if isinstance(data, ivy.Array) else ivy.array(data)
 
     def __repr__(self):
-        return (
-            "ivy.functional.frontends.torch.Tensor(" + str(ivy.to_list(self.data)) + ")"
-        )
+        return f"ivy.functional.frontends.torch.Tensor({str(ivy.to_list(self.data))})"
 
     # Instance Methods #
     # ---------------- #
@@ -94,19 +92,19 @@ class Tensor:
         )
 
     def to(self, *args, **kwargs):
-        if len(args) > 0:
-            if isinstance(args[0], ivy.Dtype):
-                return self._to_with_dtype(*args, **kwargs)
-            elif isinstance(args[0], ivy.Device):
-                return self._to_with_device(*args, **kwargs)
-            else:
-                return self._to_with_tensor(*args, **kwargs)
+        if len(args) <= 0:
+            return (
+                self._to_with_device(**kwargs)
+                if "tensor" not in kwargs
+                else self._to_with_tensor(**kwargs)
+            )
 
+        if isinstance(args[0], ivy.Dtype):
+            return self._to_with_dtype(*args, **kwargs)
+        elif isinstance(args[0], ivy.Device):
+            return self._to_with_device(*args, **kwargs)
         else:
-            if "tensor" not in kwargs:
-                return self._to_with_device(**kwargs)
-            else:
-                return self._to_with_tensor(**kwargs)
+            return self._to_with_tensor(*args, **kwargs)
 
     def _to_with_tensor(
         self, tensor, non_blocking=False, copy=False, *, memory_format=None
@@ -200,9 +198,11 @@ class Tensor:
         return Tensor(_data)
 
     def unfold(self, dimension, size, step):
-        slices = []
-        for i in range(0, self.data.shape[dimension] - size + 1, step):
-            slices.append(self.data[i : i + size])
+        slices = [
+            self.data[i : i + size]
+            for i in range(0, self.data.shape[dimension] - size + 1, step)
+        ]
+
         return ivy.stack(slices)
 
     def long(self, memory_format=None):

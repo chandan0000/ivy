@@ -26,8 +26,7 @@ def all(a, axis=None, out=None, keepdims=False, *, where=False):
 
 @to_ivy_arrays_and_back
 def arctan(x):
-    ret = ivy.atan(x)
-    return ret
+    return ivy.atan(x)
 
 
 @to_ivy_arrays_and_back
@@ -225,12 +224,11 @@ def arcsinh(x):
 
 @to_ivy_arrays_and_back
 def fmax(x1, x2):
-    ret = ivy.where(
+    return ivy.where(
         ivy.bitwise_or(ivy.greater(x1, x2), ivy.isnan(x2)),
         x1,
         x2,
     )
-    return ret
 
 
 @to_ivy_arrays_and_back
@@ -316,10 +314,8 @@ def arange(start, stop=None, step=None, dtype=None):
 
 @to_ivy_arrays_and_back
 def bincount(x, weights=None, minlength=0, *, length=None):
-    x_list = []
-    for i in range(x.shape[0]):
-        x_list.append(int(x[i]))
-    ret = [x_list.count(i) for i in range(0, max(x_list) + 1)]
+    x_list = [int(x[i]) for i in range(x.shape[0])]
+    ret = [x_list.count(i) for i in range(max(x_list) + 1)]
     ret = ivy.array(ret)
     ret = ivy.astype(ret, ivy.as_ivy_dtype(ivy.int64))
     return ret

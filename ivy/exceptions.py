@@ -14,8 +14,7 @@ class IvyBackendException(IvyException):
             "numpy" if ivy.current_backend_str() == "" else ivy.current_backend_str()
         ]
         self._delimiter = ": "
-        for message in messages:
-            self._default.append(message)
+        self._default.extend(iter(messages))
         super().__init__(self._delimiter.join(self._default))
 
 
@@ -30,8 +29,7 @@ class IvyError(IndexError, ValueError, AttributeError, IvyException):
             "numpy" if ivy.current_backend_str() == "" else ivy.current_backend_str()
         ]
         self._delimiter = ": "
-        for message in messages:
-            self._default.append(message)
+        self._default.extend(iter(messages))
         super().__init__(self._delimiter.join(self._default))
 
 

@@ -1,5 +1,6 @@
 """Collection of general Ivy functions."""
 
+
 import gc
 import inspect
 import math
@@ -26,24 +27,24 @@ from ivy.func_wrapper import (
 )
 from ivy.functional.ivy.device import dev
 
-FN_CACHE = dict()
+FN_CACHE = {}
 INF = float("inf")
 TMP_DIR = "/tmp"
 
-queue_timeout_stack = list()
-array_mode_stack = list()
-shape_array_mode_stack = list()
-nestable_mode_stack = list()
-exception_trace_mode_stack = list()
+queue_timeout_stack = []
+array_mode_stack = []
+shape_array_mode_stack = []
+nestable_mode_stack = []
+exception_trace_mode_stack = []
 
 
 def _parse_ellipsis(so, ndims):
-    pre = list()
+    pre = []
     for s in so:
         if s is Ellipsis:
             break
         pre.append(s)
-    post = list()
+    post = []
     for s in reversed(so):
         if s is Ellipsis:
             break
@@ -86,12 +87,16 @@ def get_referrers_recursive(
         for ref in gc.get_referrers(item)
         if not (
             isinstance(ref, dict)
-            and min([k in ref for k in ["depth", "max_depth", "seen_set", "local_set"]])
+            and min(
+                k in ref
+                for k in ["depth", "max_depth", "seen_set", "local_set"]
+            )
         )
     ]
-    local_set.add(str(id(referrers)))
+
+    local_set.add(id(referrers))
     for ref in referrers:
-        ref_id = str(id(ref))
+        ref_id = id(ref)
         if ref_id in local_set or hasattr(ref, "cell_contents"):
             continue
         seen = ref_id in seen_set
@@ -111,7 +116,7 @@ def get_referrers_recursive(
                 val[k] = v
         else:
             val = this_repr
-        ret_cont[str(ref_id)] = val
+        ret_cont[ref_id] = val
     return ret_cont
 
 
@@ -298,9 +303,7 @@ def get_array_mode() -> bool:
     False
     """
     global array_mode_stack
-    if not array_mode_stack:
-        return True
-    return array_mode_stack[-1]
+    return array_mode_stack[-1] if array_mode_stack else True
 
 
 @handle_exceptions
@@ -362,9 +365,7 @@ def get_nestable_mode() -> bool:
     False
     """
     global nestable_mode_stack
-    if not nestable_mode_stack:
-        return True
-    return nestable_mode_stack[-1]
+    return nestable_mode_stack[-1] if nestable_mode_stack else True
 
 
 @handle_exceptions
@@ -424,9 +425,7 @@ def get_exception_trace_mode() -> bool:
     False
     """
     global exception_trace_mode_stack
-    if not exception_trace_mode_stack:
-        return True
-    return exception_trace_mode_stack[-1]
+    return exception_trace_mode_stack[-1] if exception_trace_mode_stack else True
 
 
 @inputs_to_native_arrays
@@ -559,10 +558,7 @@ def all_equal(
                 mat[j][i] = res
         return ivy.array(mat)
     x0 = xs[0]
-    for x in xs[1:]:
-        if not equality_fn(x0, x):
-            return False
-    return True
+    return all(equality_fn(x0, x) for x in xs[1:])
 
 
 @inputs_to_native_arrays
@@ -835,10 +831,7 @@ def clip_vector_norm(
     """
     norm = ivy.vector_norm(x, keepdims=True, ord=p)
     ratio = ivy.stable_divide(max_norm, norm)
-    if ratio < 1:
-        ret = ratio * x
-    else:
-        ret = ivy.copy_array(x)
+    ret = ratio * x if ratio < 1 else ivy.copy_array(x)
     if out is not None:
         ret = ivy.inplace_update(out, ret)
     return ret
@@ -968,23 +961,22 @@ def fourier_encode(
     orig_x = x
     if linear:
         scales = ivy.linspace(1.0, max_freq / 2, num_bands, device=dev(x))
+    elif ivy.backend == "torch" and isinstance(max_freq, float):
+        scales = ivy.logspace(
+            0.0,
+            ivy.log(ivy.array(max_freq / 2)) / math.log(10),
+            num_bands,
+            base=10,
+            device=dev(x),
+        )
     else:
-        if ivy.backend == "torch" and isinstance(max_freq, float):
-            scales = ivy.logspace(
-                0.0,
-                ivy.log(ivy.array(max_freq / 2)) / math.log(10),
-                num_bands,
-                base=10,
-                device=dev(x),
-            )
-        else:
-            scales = ivy.logspace(
-                0.0,
-                ivy.log(max_freq / 2) / math.log(10),
-                num_bands,
-                base=10,
-                device=dev(x),
-            )
+        scales = ivy.logspace(
+            0.0,
+            ivy.log(max_freq / 2) / math.log(10),
+            num_bands,
+            base=10,
+            device=dev(x),
+        )
     scales = ivy.astype(scales, ivy.dtype(x))
     scales = scales[(*((None,) * (len(x.shape) - len(scales.shape))), Ellipsis)]
     x = x * scales * math.pi
@@ -1050,11 +1042,9 @@ def value_is_nan(
     False
     """
     x_scalar = ivy.to_scalar(x) if ivy.is_array(x) else x
-    if not x_scalar == x:
+    if x_scalar != x:
         return True
-    if include_infs and x_scalar == INF or x_scalar == -INF:
-        return True
-    return False
+    return bool(include_infs and x_scalar == INF or x_scalar == -INF)
 
 
 @inputs_to_native_arrays
@@ -1277,9 +1267,7 @@ def default(
     """
     with_callable = catch_exceptions or with_callable
     if rev:
-        tmp = x
-        x = default_val
-        default_val = tmp
+        x, default_val = default_val, x
     if with_callable:
         x_callable = callable(x)
         default_callable = callable(default_val)
@@ -1312,9 +1300,7 @@ def to_ivy_shape(shape: Union[ivy.Shape, ivy.NativeShape]) -> ivy.Shape:
         the input in ivy.Shape form
 
     """
-    if isinstance(shape, ivy.Shape):
-        return shape
-    return ivy.Shape(shape)
+    return shape if isinstance(shape, ivy.Shape) else ivy.Shape(shape)
 
 
 @handle_exceptions
@@ -1457,17 +1443,15 @@ def match_kwargs(
     [{'out': ivy.array([0., 0., 0.]), 'bias': ivy.array([0, 1, 2])}, {}]
 
     """
-    split_kwargs = list()
+    split_kwargs = []
     for receiver in receivers:
         expected_kwargs = arg_names(receiver)
         found_kwargs = {k: v for k, v in kwargs.items() if k in expected_kwargs}
         if not allow_duplicates:
-            for k in found_kwargs.keys():
+            for k in found_kwargs:
                 del kwargs[k]
         split_kwargs.append(found_kwargs)
-    if len(split_kwargs) == 1:
-        return split_kwargs[0]
-    return split_kwargs
+    return split_kwargs[0] if len(split_kwargs) == 1 else split_kwargs
 
 
 @handle_exceptions
@@ -1527,15 +1511,17 @@ def cache_fn(func: Callable) -> Callable:
     """
     global FN_CACHE
     if func not in FN_CACHE:
-        FN_CACHE[func] = dict()
+        FN_CACHE[func] = {}
 
     @wraps(func)
     def cached_fn(*args, **kwargs):
         key = "".join(
-            [str(i) + ", " for i in args]
-            + [" kw, "]
-            + [str(i) + ", " for i in sorted(kwargs.items())]
+            (
+                ([f"{str(i)}, " for i in args] + [" kw, "])
+                + [f"{str(i)}, " for i in sorted(kwargs.items())]
+            )
         )
+
         cache = FN_CACHE[func]
         if key in cache:
             return cache[key]
@@ -1557,9 +1543,7 @@ def current_backend_str() -> Union[str, None]:
 
     """
     fw = current_backend()
-    if not backend_stack:
-        return ""
-    return fw.current_backend_str()
+    return fw.current_backend_str() if backend_stack else ""
 
 
 @inputs_to_native_arrays
@@ -1595,9 +1579,7 @@ def einops_rearrange(
     """
     ret = einops.rearrange(x, pattern, **axes_lengths)
     ret = ivy.array(ret, dtype=x.dtype)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @inputs_to_native_arrays
@@ -1658,9 +1640,7 @@ def einops_reduce(
     """
     ret = einops.reduce(x, pattern, reduction, **axes_lengths)
     ret = ivy.array(ret, dtype=x.dtype)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 # IMPORTANT: assign attribute directly to function instead of wrapper here
@@ -1725,9 +1705,7 @@ def einops_repeat(
     """
     ret = einops.repeat(x, pattern, **axes_lengths)
     ret = ivy.array(ret, dtype=x.dtype)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @handle_exceptions
@@ -1967,7 +1945,7 @@ stable_pow.unsupported_dtypes = ("bfloat16",)
 @handle_exceptions
 def get_all_arrays_in_memory():
     """Gets all arrays which are currently alive."""
-    all_arrays = list()
+    all_arrays = []
     for obj in gc.get_objects():
         try:
             if ivy.is_native_array(obj):
@@ -2046,9 +2024,7 @@ def get_queue_timeout() -> float:
 
     """
     global queue_timeout_stack
-    if not queue_timeout_stack:
-        return 15.0
-    return queue_timeout_stack[-1]
+    return queue_timeout_stack[-1] if queue_timeout_stack else 15.0
 
 
 @handle_exceptions
@@ -2239,10 +2215,9 @@ def assert_supports_inplace(x: Union[ivy.Array, ivy.NativeArray], /) -> bool:
     """
     ivy.assertions.check_true(
         ivy.supports_inplace_updates(x),
-        "Inplace operations are not supported {} types with {} backend".format(
-            type(x), ivy.current_backend_str()
-        ),
+        f"Inplace operations are not supported {type(x)} types with {ivy.current_backend_str()} backend",
     )
+
     return True
 
 
@@ -2736,9 +2711,7 @@ def gather_nd(
     res = current_backend(params, indices).gather_nd(
         params, indices, batch_dims=batch_dims
     )
-    if ivy.exists(out):
-        return ivy.inplace_update(out, res)
-    return res
+    return ivy.inplace_update(out, res) if ivy.exists(out) else res
 
 
 @handle_nestable
@@ -2853,9 +2826,7 @@ def shape_array_mode() -> bool:
     True
     """
     global shape_array_mode_stack
-    if not shape_array_mode_stack:
-        return False
-    return shape_array_mode_stack[-1]
+    return shape_array_mode_stack[-1] if shape_array_mode_stack else False
 
 
 @to_native_arrays_and_back
@@ -2986,18 +2957,16 @@ def _is_valid_device_and_dtypes_attributes(fn: Callable) -> bool:
 
 
 def _all_dnd_combinations():
-    all_comb = {}
-    for device in ivy.all_devices:
-        all_comb[device] = ivy.all_dtypes
-    return all_comb
+    return {device: ivy.all_dtypes for device in ivy.all_devices}
 
 
 def _dnd_dict_intersection(a, b):
     res = {}
     for device in a:
         if device in b:
-            intersection = set.intersection(set(a[device]), set(b[device]))
-            if intersection:
+            if intersection := set.intersection(
+                set(a[device]), set(b[device])
+            ):
                 res[device] = tuple(intersection)
     return res
 
@@ -3006,8 +2975,7 @@ def _dnd_dict_difference(a, b):
     res = a
     for device in list(a):
         if device in b:
-            difference = set.difference(set(a[device]), set(b[device]))
-            if difference:
+            if difference := set.difference(set(a[device]), set(b[device])):
                 res[device] = tuple(difference)
             else:
                 del res[device]
@@ -3028,11 +2996,7 @@ def _get_devices_and_dtypes(fn, complement=True):
     supported_devices = ivy.function_supported_devices(fn)
     supported_dtypes = ivy.function_supported_dtypes(fn)
 
-    supported = {}
-    # Generate a base supported set from other attributes
-    for device in supported_devices:
-        supported[device] = supported_dtypes
-
+    supported = {device: supported_dtypes for device in supported_devices}
     is_backend_fn = "backend" in fn.__module__
     is_frontend_fn = "frontend" in fn.__module__
     is_einops_fn = "einops" in fn.__name__

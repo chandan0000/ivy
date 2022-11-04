@@ -51,10 +51,7 @@ def unfold(input, kernel_size, dilation=1, padding=0, stride=1):
         "and other non-zero dimensions for input",
     )
 
-    dim_batch = 0
-    if ndim == 3:
-        dim_batch = -1
-
+    dim_batch = -1 if ndim == 3 else 0
     input_height = input.shape[dim_batch + 2]
     input_width = input.shape[dim_batch + 3]
     output_height = int(
@@ -174,10 +171,7 @@ def fold(input, output_size, kernel_size, dilation=1, padding=0, stride=1):
         "non-zero dimensions for input",
     )
 
-    dim_batch = 0
-    if ndim == 3:
-        dim_batch = -1
-
+    dim_batch = -1 if ndim == 3 else 0
     n_input_channels = input.shape[dim_batch + 1]
 
     ivy.assertions.check_true(

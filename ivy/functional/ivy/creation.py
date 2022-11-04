@@ -47,7 +47,7 @@ def asarray_handle_nestable(fn: Callable) -> Callable:
         """
         # This decorator should only be applied to ivy.asarray, so we know where
         # the container must be if there is one.
-        cont_fn = getattr(ivy.Container, "static_" + fn_name)
+        cont_fn = getattr(ivy.Container, f"static_{fn_name}")
         if isinstance(args[0], ivy.Container):
             return cont_fn(*args, **kwargs)
 
@@ -67,14 +67,13 @@ def _ivy_to_native(x):
     ) or (isinstance(x, np.ndarray) and x.ndim > 1):
         for i, item in enumerate(x):
             x[i] = _ivy_to_native(item)
-    else:
-        if (
+    elif (
             (isinstance(x, (list, tuple)) and len(x) > 0)
             or (isinstance(x, np.ndarray) and x.ndim >= 1 and x.size != 0)
         ) and ivy.is_ivy_array(x[0]):
-            x = ivy.to_native(x, nested=True)
-        elif ivy.is_ivy_array(x):
-            x = ivy.to_native(x)
+        x = ivy.to_native(x, nested=True)
+    elif ivy.is_ivy_array(x):
+        x = ivy.to_native(x)
     return x
 
 

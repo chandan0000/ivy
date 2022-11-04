@@ -4,9 +4,11 @@ from ivy.functional.frontends.jax.func_wrapper import to_ivy_arrays_and_back
 
 @to_ivy_arrays_and_back
 def svd(x, /, *, full_matrices=True, compute_uv=True):
-    if not compute_uv:
-        return ivy.svdvals(x)
-    return ivy.svd(x, full_matrices=full_matrices)
+    return (
+        ivy.svd(x, full_matrices=full_matrices)
+        if compute_uv
+        else ivy.svdvals(x)
+    )
 
 
 @to_ivy_arrays_and_back

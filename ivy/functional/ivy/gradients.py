@@ -43,9 +43,7 @@ def _get_required_native_variables(xs, xs_grad_idxs):
         xs = ivy.nested_map(xs, ivy.to_native)
 
     def map_fn(x):
-        if ivy.is_native_array(x):
-            return x
-        return None
+        return x if ivy.is_native_array(x) else None
 
     xs = ivy.nested_map(xs, map_fn, include_derived=True)
     none_idxs = ivy.nested_argwhere(xs, lambda x: x is None)
@@ -68,14 +66,14 @@ def _remove_zeros_and_nones(grads, x, idx=[]):
     if x is None:
         ivy.prune_nest_at_index(grads, idx)
     else:
-        keys = [k for k in x]
+        keys = list(x)
         for k in keys:
             idx.append(k)
             grads = _remove_zeros_and_nones(grads, x[k], idx)
             idx.pop()
 
-        keys = [k for k in x]
-        if len(keys) == 0 and len(idx) and _check_if_empty(idx):
+        keys = list(x)
+        if not keys and len(idx) and _check_if_empty(idx):
             ivy.prune_nest_at_index(grads, idx)
     return grads
 
@@ -96,9 +94,7 @@ def _get_native_variables_and_indices(x, reshape=True):
                 return ivy.to_native(x_)
             if reshape:
                 if x_.size == 1:
-                    if reshape:
-                        return ivy.to_native(ivy.reshape(x_, []))
-                    return ivy.to_native(x_)
+                    return ivy.to_native(ivy.reshape(x_, [])) if reshape else ivy.to_native(x_)
                 else:
                     return ivy.to_ivy(x_)
             else:
@@ -112,10 +108,9 @@ def _get_native_variables_and_indices(x, reshape=True):
     arr_idxs = ivy.nested_argwhere(x, lambda x: ivy.is_native_array(x))
     if _check_if_empty(arr_idxs):
         return arr_idxs, []
-    else:
-        arr_values = ivy.multi_index_nest(x, arr_idxs)
-        arr_idxs = _idxs_to_str(arr_idxs)
-        return arr_idxs, arr_values
+    arr_values = ivy.multi_index_nest(x, arr_idxs)
+    arr_idxs = _idxs_to_str(arr_idxs)
+    return arr_idxs, arr_values
 
 
 def _stop_grad_and_index(func_ret, retain_grads, grads, grad_idxs):
@@ -139,7 +134,7 @@ def _stop_grad_and_index(func_ret, retain_grads, grads, grad_idxs):
 # Extra #
 # ------#
 
-with_grads_stack = list()
+with_grads_stack = []
 
 
 class GradientTracking:

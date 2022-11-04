@@ -46,7 +46,7 @@ class Process_issue:
     def child_issue_id_in_comment(self):
         try:
             issue_id = re.search(r"[#/]\d+", self._comment_body)
-            return True, issue_id.group(0)
+            return True, issue_id[0]
         except AttributeError:
             return False, None
 

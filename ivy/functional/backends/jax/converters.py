@@ -11,24 +11,18 @@ import ivy
 
 
 def _hk_flat_map_to_dict(hk_flat_map):
-    ret_dict = dict()
+    ret_dict = {}
     for k, v in hk_flat_map.items():
         new_k = k.replace("/", "|")
-        if isinstance(v, FlatMapping):
-            ret_dict[new_k] = _hk_flat_map_to_dict(v)
-        else:
-            ret_dict[new_k] = v
+        ret_dict[new_k] = _hk_flat_map_to_dict(v) if isinstance(v, FlatMapping) else v
     return ret_dict
 
 
 def _dict_to_hk_flat_map(dict_in):
-    ret_flat_map = dict()
+    ret_flat_map = {}
     for k, v in dict_in.items():
         new_k = k.replace("|", "/")
-        if isinstance(v, dict):
-            ret_flat_map[new_k] = _dict_to_hk_flat_map(v)
-        else:
-            ret_flat_map[new_k] = v
+        ret_flat_map[new_k] = _dict_to_hk_flat_map(v) if isinstance(v, dict) else v
     return FlatMapping(ret_flat_map)
 
 

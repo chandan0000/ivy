@@ -581,28 +581,25 @@ class Container(
         return state_dict
 
     def __setstate__(self, state_dict):
-        if "_local_ivy" in state_dict:
-            if ivy.exists(state_dict["_local_ivy"]):
-                if len(state_dict["_local_ivy"]) > 0:
-                    state_dict["_local_ivy"] = ivy.get_backend(state_dict["_local_ivy"])
-                else:
-                    state_dict["_local_ivy"] = ivy
+        if "_local_ivy" in state_dict and ivy.exists(state_dict["_local_ivy"]):
+            if len(state_dict["_local_ivy"]) > 0:
+                state_dict["_local_ivy"] = ivy.get_backend(state_dict["_local_ivy"])
+            else:
+                state_dict["_local_ivy"] = ivy
         if "_config_in" in state_dict:
             config_in = copy.copy(state_dict["_config_in"])
-            if "ivyh" in config_in:
-                if ivy.exists(config_in["ivyh"]):
-                    if len(config_in["ivyh"]) > 0:
-                        config_in["ivyh"] = ivy.get_backend(config_in["ivyh"])
-                    else:
-                        config_in["ivyh"] = ivy
+            if "ivyh" in config_in and ivy.exists(config_in["ivyh"]):
+                if len(config_in["ivyh"]) > 0:
+                    config_in["ivyh"] = ivy.get_backend(config_in["ivyh"])
+                else:
+                    config_in["ivyh"] = ivy
             state_dict["_config_in"] = config_in
         if "_config" in state_dict:
             config = copy.copy(state_dict["_config"])
-            if "ivyh" in config:
-                if ivy.exists(config["ivyh"]):
-                    if len(config["ivyh"]) > 0:
-                        config["ivyh"] = ivy.get_backend(config["ivyh"])
-                    else:
-                        config["ivyh"] = ivy
+            if "ivyh" in config and ivy.exists(config["ivyh"]):
+                if len(config["ivyh"]) > 0:
+                    config["ivyh"] = ivy.get_backend(config["ivyh"])
+                else:
+                    config["ivyh"] = ivy
             state_dict["_config"] = config
         self.__dict__.update(state_dict)

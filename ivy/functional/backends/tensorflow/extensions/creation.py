@@ -27,8 +27,8 @@ def triu_indices(
 
     ret = [[], []]
 
-    for i in range(0, min(n_rows, n_cols - k), 1):
-        for j in range(max(0, k + i), n_cols, 1):
+    for i in range(min(n_rows, n_cols - k)):
+        for j in range(max(0, k + i), n_cols):
             ret[0].append(i)
             ret[1].append(j)
 

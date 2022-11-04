@@ -155,13 +155,8 @@ def pinverse(input, rcond=1e-15):
 
 @to_ivy_arrays_and_back
 def qr(input, some=True, *, out=None):
-    if some:
-        ret = ivy.qr(input, mode="reduced")
-    else:
-        ret = ivy.qr(input, mode="complete")
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    ret = ivy.qr(input, mode="reduced") if some else ivy.qr(input, mode="complete")
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @to_ivy_arrays_and_back
@@ -176,9 +171,7 @@ def svd(input, some=True, compute_uv=True, *, out=None):
         ret = ivy.svd(input, full_matrices=False)
     else:
         ret = ivy.svd(input, full_matrices=True)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @to_ivy_arrays_and_back

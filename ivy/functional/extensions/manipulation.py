@@ -135,7 +135,7 @@ def flatten(
         c *= x.shape[i]
     lst = [c]
     if start_dim != 0:
-        for i in range(0, start_dim):
+        for i in range(start_dim):
             lst.insert(i, x.shape[i])
     for i in range(end_dim + 1, len(x.shape)):
         lst.insert(i, x.shape[i])

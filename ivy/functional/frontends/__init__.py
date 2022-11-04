@@ -31,7 +31,7 @@ def fn_name_from_version_specific_fn_name(name, version):
 
     """
     version = str(version)
-    if version.find("+") != -1:
+    if "+" in version:
         version = tuple(map(int, version[: version.index("+")].split(".")))
         # version = int(version[: version.index("+")].replace(".", ""))
     else:
@@ -45,21 +45,21 @@ def fn_name_from_version_specific_fn_name(name, version):
         version_end = name[e + 4 :]
         version_end = tuple(map(int, version_end.split("p")))
         if version_start <= version <= version_end:
-            return name[0:i]
+            return name[:i]
     elif "_and_above" in name:
         i = name.index("_v_")
         e = name.index("_and_")
         version_start = name[i + 3 : e]
         version_start = tuple(map(int, version_start.split("p")))
         if version >= version_start:
-            return name[0:i]
+            return name[:i]
     else:
         i = name.index("_v_")
         e = name.index("_and_")
         version_start = name[i + 3 : e]
         version_start = tuple(map(int, version_start.split("p")))
         if version <= version_start:
-            return name[0:i]
+            return name[:i]
 
 
 def set_frontend_to_specific_version(frontend):
@@ -87,8 +87,9 @@ def set_frontend_to_specific_version(frontend):
 
     for i in list(frontend.__dict__):
         if "_v_" in i:
-            orig_name = fn_name_from_version_specific_fn_name(i, f_version)
-            if orig_name:
+            if orig_name := fn_name_from_version_specific_fn_name(
+                i, f_version
+            ):
                 frontend.__dict__[orig_name] = frontend.__dict__[i]
 
 

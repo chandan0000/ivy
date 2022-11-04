@@ -176,8 +176,7 @@ class ndarray:
             return self.data != 0
 
         temp = ivy.squeeze(ivy.asarray(self.data), axis=None)
-        shape = ivy.shape(temp)
-        if shape:
+        if shape := ivy.shape(temp):
             raise ValueError(
                 "The truth value of an array with more than one element is ambiguous. "
                 "Use a.any() or a.all()"

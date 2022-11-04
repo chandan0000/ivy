@@ -12,7 +12,7 @@ from ivy.func_wrapper import _wrap_function
 backend_stack = []
 implicit_backend = "numpy"
 ivy_original_dict = ivy.__dict__.copy()
-ivy_original_fn_dict = dict()
+ivy_original_fn_dict = {}
 
 
 class ContextManager:
@@ -26,24 +26,27 @@ class ContextManager:
         unset_backend()
 
 
-_array_types = dict()
-_array_types["numpy"] = "ivy.functional.backends.numpy"
-_array_types["jax.interpreters.xla"] = "ivy.functional.backends.jax"
-_array_types["jaxlib.xla_extension"] = "ivy.functional.backends.jax"
-_array_types["tensorflow.python.framework.ops"] = "ivy.functional.backends.tensorflow"
-_array_types["torch"] = "ivy.functional.backends.torch"
+_array_types = {
+    "numpy": "ivy.functional.backends.numpy",
+    "jax.interpreters.xla": "ivy.functional.backends.jax",
+    "jaxlib.xla_extension": "ivy.functional.backends.jax",
+    "tensorflow.python.framework.ops": "ivy.functional.backends.tensorflow",
+    "torch": "ivy.functional.backends.torch",
+}
 
-_backend_dict = dict()
-_backend_dict["numpy"] = "ivy.functional.backends.numpy"
-_backend_dict["jax"] = "ivy.functional.backends.jax"
-_backend_dict["tensorflow"] = "ivy.functional.backends.tensorflow"
-_backend_dict["torch"] = "ivy.functional.backends.torch"
+_backend_dict = {
+    "numpy": "ivy.functional.backends.numpy",
+    "jax": "ivy.functional.backends.jax",
+    "tensorflow": "ivy.functional.backends.tensorflow",
+    "torch": "ivy.functional.backends.torch",
+}
 
-_backend_reverse_dict = dict()
-_backend_reverse_dict["ivy.functional.backends.numpy"] = "numpy"
-_backend_reverse_dict["ivy.functional.backends.jax"] = "jax"
-_backend_reverse_dict["ivy.functional.backends.tensorflow"] = "tensorflow"
-_backend_reverse_dict["ivy.functional.backends.torch"] = "torch"
+_backend_reverse_dict = {
+    "ivy.functional.backends.numpy": "numpy",
+    "ivy.functional.backends.jax": "jax",
+    "ivy.functional.backends.tensorflow": "tensorflow",
+    "ivy.functional.backends.torch": "torch",
+}
 
 
 # Backend Getting/Setting #
@@ -78,20 +81,14 @@ def _determine_backend_from_args(args):
         arg_type = type(arg)
         # function is called recursively if arg is a list/tuple
         if arg_type in [list, tuple]:
-            lib = _determine_backend_from_args(arg)
-            if lib:
+            if lib := _determine_backend_from_args(arg):
                 return lib
-        # function is called recursively if arg is a dict
         elif arg_type is dict:
-            lib = _determine_backend_from_args(list(arg.values()))
-            if lib:
+            if lib := _determine_backend_from_args(list(arg.values())):
                 return lib
-        else:
-            # use the _array_types dict to map the module where arg comes from, to the
-            # corresponding Ivy backend
-            if arg.__class__.__module__ in _array_types:
-                module_name = _array_types[arg.__class__.__module__]
-                return importlib.import_module(module_name)
+        elif arg.__class__.__module__ in _array_types:
+            module_name = _array_types[arg.__class__.__module__]
+            return importlib.import_module(module_name)
 
 
 def fn_name_from_version_specific_fn_name(name, version):
@@ -112,7 +109,7 @@ def fn_name_from_version_specific_fn_name(name, version):
     """
     # TODO: add docstring and tests
     version = str(version)
-    if version.find("+") != -1:
+    if "+" in version:
         version = tuple(map(int, version[: version.index("+")].split(".")))
     else:
         version = tuple(map(int, version.split(".")))
@@ -124,21 +121,21 @@ def fn_name_from_version_specific_fn_name(name, version):
         version_end = name[e + 4 :]
         version_end = tuple(map(int, version_end.split("p")))
         if version_start <= version <= version_end:
-            return name[0:i]
+            return name[:i]
     elif "_and_above" in name:
         i = name.index("_v_")
         e = name.index("_and_")
         version_start = name[i + 3 : e]
         version_start = tuple(map(int, version_start.split("p")))
         if version >= version_start:
-            return name[0:i]
+            return name[:i]
     else:
         i = name.index("_v_")
         e = name.index("_and_")
         version_start = name[i + 3 : e]
         version_start = tuple(map(int, version_start.split("p")))
         if version <= version_start:
-            return name[0:i]
+            return name[:i]
 
 
 def set_backend_to_specific_version(backend):
@@ -163,8 +160,9 @@ def set_backend_to_specific_version(backend):
 
     for key in list(backend.__dict__):
         if "_v_" in key:
-            orig_name = fn_name_from_version_specific_fn_name(key, f_version)
-            if orig_name:
+            if orig_name := fn_name_from_version_specific_fn_name(
+                key, f_version
+            ):
                 backend.__dict__[orig_name] = backend.__dict__[key]
                 backend.__dict__[orig_name].__name__ = orig_name
 
@@ -207,7 +205,7 @@ def current_backend(*args, **kwargs):
     if backend_stack:
         f = backend_stack[-1]
         if verbosity.level > 0:
-            verbosity.cprint("Using backend from stack: {}".format(f))
+            verbosity.cprint(f"Using backend from stack: {f}")
         return f
 
     # if no global backend exists, we try to infer the backend from the arguments
@@ -216,7 +214,7 @@ def current_backend(*args, **kwargs):
         implicit_backend = f.current_backend_str()
         return f
     if verbosity.level > 0:
-        verbosity.cprint("Using backend from type: {}".format(f))
+        verbosity.cprint(f"Using backend from type: {f}")
     return importlib.import_module(_backend_dict[implicit_backend])
 
 
@@ -242,14 +240,15 @@ def set_backend(backend: str):
     """
     ivy.assertions.check_false(
         isinstance(backend, str) and backend not in _backend_dict,
-        "backend must be one from {}".format(list(_backend_dict.keys())),
+        f"backend must be one from {list(_backend_dict.keys())}",
     )
+
     ivy.locks["backend_setter"].acquire()
     global ivy_original_dict
     if not backend_stack:
         ivy_original_dict = ivy.__dict__.copy()
     if isinstance(backend, str):
-        temp_stack = list()
+        temp_stack = []
         while backend_stack:
             temp_stack.append(unset_backend())
         backend = importlib.import_module(_backend_dict[backend])
@@ -270,7 +269,7 @@ def set_backend(backend: str):
         ivy.__dict__[k] = _wrap_function(key=k, to_wrap=backend.__dict__[k], original=v)
 
     if verbosity.level > 0:
-        verbosity.cprint("backend stack: {}".format(backend_stack))
+        verbosity.cprint(f"backend stack: {backend_stack}")
     ivy.locks["backend_setter"].release()
 
 
@@ -406,7 +405,7 @@ def unset_backend():
             if k in ivy_original_dict:
                 ivy.__dict__[k] = v
     if verbosity.level > 0:
-        verbosity.cprint("backend stack: {}".format(backend_stack))
+        verbosity.cprint(f"backend stack: {backend_stack}")
     return backend
 
 
@@ -416,7 +415,7 @@ def clear_backend_stack():
 
 
 def choose_random_backend(excluded=None):
-    excluded = list() if excluded is None else excluded
+    excluded = [] if excluded is None else excluded
     while True:
         ivy.assertions.check_equal(
             len(excluded),
@@ -432,5 +431,5 @@ def choose_random_backend(excluded=None):
             excluded.append(f)
             continue
         else:
-            print("\nselected backend: {}\n".format(f))
+            print(f"\nselected backend: {f}\n")
             return f

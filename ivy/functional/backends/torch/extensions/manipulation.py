@@ -90,12 +90,11 @@ def top_k(
     )
     if not largest:
         indices = torch.argsort(x, dim=axis, stable=True)
-        indices = torch.take(indices, torch.arange(k), dim=axis)
     else:
         x *= -1
         indices = torch.argsort(x, dim=axis, stable=True)
-        indices = torch.take(indices, torch.arange(k), dim=axis)
         x *= -1
+    indices = torch.take(indices, torch.arange(k), dim=axis)
     val = torch.gather(x, axis, indices)
     return topk_res(val, indices)
 

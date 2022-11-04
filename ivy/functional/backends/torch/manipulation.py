@@ -62,14 +62,8 @@ def flip(
     num_dims = len(x.shape)
     if not num_dims:
         return x
-    if axis is None:
-        new_axis = list(range(num_dims))
-    else:
-        new_axis = axis
-    if isinstance(new_axis, int):
-        new_axis = [new_axis]
-    else:
-        new_axis = new_axis
+    new_axis = list(range(num_dims)) if axis is None else axis
+    new_axis = [new_axis] if isinstance(new_axis, int) else new_axis
     new_axis = [item + num_dims if item < 0 else item for item in new_axis]
     return torch.flip(x, new_axis)
 
@@ -111,7 +105,7 @@ def roll(
         shift = [shift for _ in range(len(axis))]
     if isinstance(shift, torch.Tensor):
         shift = shift.tolist()
-        shift = tuple([shift])
+        shift = (shift, )
     return torch.roll(x, shift, axis)
 
 
@@ -125,9 +119,9 @@ def squeeze(
     if isinstance(axis, int):
         if x.size(dim=axis) > 1:
             raise ValueError(
-                "Expected dimension of size [{}, {}], but found "
-                "dimension size {}".format(-x.dim(), x.dim(), axis)
+                f"Expected dimension of size [{-x.dim()}, {x.dim()}], but found dimension size {axis}"
             )
+
         if x.shape[axis] != 1:
             raise ivy.exceptions.IvyException(
                 f"Expected size of axis to be 1 but was {x.shape[axis]}"
@@ -147,9 +141,9 @@ def squeeze(
         shape = x.shape[i]
         if shape > 1 and (shape < -dim or dim <= shape):
             raise ValueError(
-                "Expected dimension of size [{}, {}], "
-                "but found dimension size {}".format(-dim, dim, shape)
+                f"Expected dimension of size [{-dim}, {dim}], but found dimension size {shape}"
             )
+
         else:
             x = torch.squeeze(x, i)
     return x
@@ -183,10 +177,9 @@ def split(
     if x.shape == ():
         if num_or_size_splits is not None and num_or_size_splits != 1:
             raise ivy.exceptions.IvyException(
-                "input array had no shape, but num_sections specified was {}".format(
-                    num_or_size_splits
-                )
+                f"input array had no shape, but num_sections specified was {num_or_size_splits}"
             )
+
         return [x]
     dim_size: int = x.shape[axis]
     if num_or_size_splits is None:
@@ -223,7 +216,7 @@ def repeat(
     axis: int = None,
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
-    if len(x.shape) == 0 and axis in [0, -1]:
+    if len(x.shape) == 0 and axis in {0, -1}:
         axis = None
     repeats = torch.tensor(repeats)
     return torch.repeat_interleave(x, repeats, axis)
@@ -249,10 +242,9 @@ def constant_pad(
         x = x.unsqueeze(0)
     if isinstance(pad_width, torch.Tensor):
         pad_width = pad_width.detach().cpu().numpy().tolist()
-    pad_width_flat: List[int] = list()
+    pad_width_flat: List[int] = []
     for pad_width_sec in reversed(pad_width):
-        for item in pad_width_sec:
-            pad_width_flat.append(item)
+        pad_width_flat.extend(iter(pad_width_sec))
     return torch.nn.functional.pad(x, pad_width_flat, mode="constant", value=value)
 
 
@@ -300,6 +292,4 @@ def unstack(
     if x.shape == ():
         return [x]
     ret = list(torch.unbind(x, axis))
-    if keepdims:
-        return [r.unsqueeze(axis) for r in ret]
-    return ret
+    return [r.unsqueeze(axis) for r in ret] if keepdims else ret

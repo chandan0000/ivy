@@ -15,9 +15,7 @@ def _binary_matches(y_true, y_pred, threshold=0.5):
 def _cond_convert_labels(y_true):
     are_zeros = ivy.equal(y_true, 0.0)
     are_ones = ivy.equal(y_true, 1.0)
-    is_binary = ivy.all(ivy.logical_or(are_zeros, are_ones))
-    # convert [0, 1] labels to [-1, 1]
-    if is_binary:
+    if is_binary := ivy.all(ivy.logical_or(are_zeros, are_ones)):
         return 2.0 * y_true - 1
     return y_true
 
@@ -117,9 +115,7 @@ def _sparse_top_k_categorical_matches(y_true, y_pred, k=5):
     )
 
     # return to original shape
-    if reshape:
-        return ivy.reshape(matches, shape=y_true_org_shape)
-    return matches
+    return ivy.reshape(matches, shape=y_true_org_shape) if reshape else matches
 
 
 @to_ivy_arrays_and_back
@@ -155,11 +151,7 @@ def binary_focal_crossentropy(
     if label_smoothing > 0.0:
         y_true = y_true * (1.0 - label_smoothing) + 0.5 * label_smoothing
 
-    if from_logits:
-        sigmoidal = ivy.sigmoid(y_pred)
-    else:
-        sigmoidal = y_pred
-
+    sigmoidal = ivy.sigmoid(y_pred) if from_logits else y_pred
     p_t = (y_true * sigmoidal) + ((1 - y_true) * (1 - sigmoidal))
     focal_factor = ivy.pow(1.0 - p_t, gamma)
 
@@ -282,12 +274,9 @@ def cosine_similarity(y_true, y_pred):
     y_pred = ivy.asarray(y_pred)
     y_true = ivy.asarray(y_true)
 
-    if len(y_pred.shape) == len(y_pred.shape) and len(y_true.shape) == 2:
+    if len(y_true.shape) == 2:
         numerator = ivy.sum(y_true * y_pred, axis=1)
-        denominator = ivy.matrix_norm(y_true) * ivy.matrix_norm(y_pred)
     else:
         numerator = ivy.vecdot(y_true, y_pred)
-        denominator = ivy.matrix_norm(y_true) * ivy.matrix_norm(y_pred)
-
-    cosine = numerator / denominator
-    return cosine
+    denominator = ivy.matrix_norm(y_true) * ivy.matrix_norm(y_pred)
+    return numerator / denominator

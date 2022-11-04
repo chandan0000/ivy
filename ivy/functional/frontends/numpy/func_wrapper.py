@@ -26,13 +26,14 @@ def _assert_args_and_fn(args, kwargs, dtype, fn):
         *args,
         fn=fn,
         type="all",
-        message="type of input is incompatible with dtype: {}".format(dtype),
+        message=f"type of input is incompatible with dtype: {dtype}",
     )
+
     ivy.assertions.check_all_or_any_fn(
         *kwargs,
         fn=fn,
         type="all",
-        message="type of input is incompatible with dtype: {}".format(dtype),
+        message=f"type of input is incompatible with dtype: {dtype}",
     )
 
 
@@ -64,9 +65,7 @@ def handle_numpy_casting(fn: Callable) -> Callable:
         args_to_check = ivy.multi_index_nest(args, args_idxs)
         kwargs_idxs = ivy.nested_argwhere(kwargs, ivy.is_array)
         kwargs_to_check = ivy.multi_index_nest(kwargs, kwargs_idxs)
-        if (args_to_check or kwargs_to_check) and (
-            casting == "no" or casting == "equiv"
-        ):
+        if ((args_to_check or kwargs_to_check)) and casting in ["no", "equiv"]:
             first_arg = args_to_check[0] if args_to_check else kwargs_to_check[0]
             fn_func = (
                 ivy.as_ivy_dtype(dtype) if ivy.exists(dtype) else ivy.dtype(first_arg)
@@ -142,17 +141,11 @@ def handle_numpy_casting_special(fn: Callable) -> Callable:
 
 
 def _numpy_to_ivy(x: Any) -> Any:
-    if isinstance(x, ndarray):
-        return x.data
-    else:
-        return x
+    return x.data if isinstance(x, ndarray) else x
 
 
 def _ivy_to_numpy(x: Any) -> Any:
-    if isinstance(x, ivy.Array) or ivy.is_native_array(x):
-        return ndarray(x)
-    else:
-        return x
+    return ndarray(x) if isinstance(x, ivy.Array) or ivy.is_native_array(x) else x
 
 
 def inputs_to_ivy_arrays(fn: Callable) -> Callable:
@@ -201,10 +194,11 @@ def outputs_to_numpy_arrays(fn: Callable) -> Callable:
         """
         # call unmodified function
         ret = fn(*args, **kwargs)
-        if not ivy.get_array_mode():
-            return ret
-        # convert all returned arrays to `ndarray` instances
-        return ivy.nested_map(ret, _ivy_to_numpy, include_derived={tuple: True})
+        return (
+            ivy.nested_map(ret, _ivy_to_numpy, include_derived={tuple: True})
+            if ivy.get_array_mode()
+            else ret
+        )
 
     new_fn.outputs_to_numpy_arrays = True
     return new_fn

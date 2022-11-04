@@ -18,11 +18,12 @@ def vorbis_window(
         [
             round(
                 math.sin(
-                    (ivy.pi / 2) * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
+                    (ivy.pi / 2)
+                    * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
                 ),
                 8,
             )
-            for i in range(1, window_length * 2)[0::2]
+            for i in range(1, window_length * 2)[::2]
         ],
         dtype=dtype,
     )
@@ -102,9 +103,7 @@ def max_pool2d(
 
     # B x OH x OW x O
     res = sub_matrices.max(axis=(3, 4))
-    if data_format == "NCHW":
-        return np.transpose(res, (0, 3, 1, 2))
-    return res
+    return np.transpose(res, (0, 3, 1, 2)) if data_format == "NCHW" else res
 
 
 def max_pool1d(
@@ -153,9 +152,7 @@ def max_pool1d(
 
     res = sub_matrices.max(axis=(2))
 
-    if data_format == "NCW":
-        return res.permute(0, 2, 1)
-    return res
+    return res.permute(0, 2, 1) if data_format == "NCW" else res
 
 
 def kaiser_window(
@@ -166,10 +163,11 @@ def kaiser_window(
     dtype: Optional[np.dtype] = None,
     out: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    if periodic is False:
-        return np.array(np.kaiser(M=window_length, beta=beta), dtype=dtype)
-    else:
-        return np.array(np.kaiser(M=window_length + 1, beta=beta)[:-1], dtype=dtype)
+    return (
+        np.array(np.kaiser(M=window_length + 1, beta=beta)[:-1], dtype=dtype)
+        if periodic
+        else np.array(np.kaiser(M=window_length, beta=beta), dtype=dtype)
+    )
 
 
 kaiser_window.support_native_out = False
@@ -315,9 +313,7 @@ def max_pool3d(
 
     # B x OH x OW x O
     res = sub_matrices.max(axis=(4, 5, 6))
-    if data_format == "NCDHW":
-        return np.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return np.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res
 
 
 def avg_pool3d(
@@ -383,6 +379,4 @@ def avg_pool3d(
 
     # B x OH x OW x O
     res = np.mean(sub_matrices, axis=(4, 5, 6))
-    if data_format == "NCDHW":
-        return np.transpose(res, (0, 4, 1, 2, 3))
-    return res
+    return np.transpose(res, (0, 4, 1, 2, 3)) if data_format == "NCDHW" else res

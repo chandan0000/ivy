@@ -16,10 +16,7 @@ def abs(
 ) -> Union[tf.Tensor, tf.Variable]:
     if not tf.is_tensor(x):
         x = tf.convert_to_tensor(x)
-    if "uint" in ivy.dtype(x):
-        return x
-    else:
-        return tf.abs(x)
+    return x if "uint" in ivy.dtype(x) else tf.abs(x)
 
 
 def acos(
@@ -121,10 +118,7 @@ def bitwise_invert(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if "int" not in str(x.dtype):
-        return tf.logical_not(x)
-    else:
-        return tf.bitwise.invert(x)
+    return tf.logical_not(x) if "int" not in str(x.dtype) else tf.bitwise.invert(x)
 
 
 def bitwise_left_shift(
@@ -183,10 +177,7 @@ def ceil(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if "int" in str(x.dtype):
-        return x
-    else:
-        return tf.math.ceil(x)
+    return x if "int" in str(x.dtype) else tf.math.ceil(x)
 
 
 def cos(
@@ -258,10 +249,7 @@ def floor(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if "int" in str(x.dtype):
-        return x
-    else:
-        return tf.math.floor(x)
+    return x if "int" in str(x.dtype) else tf.math.floor(x)
 
 
 def floor_divide(
@@ -315,10 +303,7 @@ def isinf(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if ivy.is_int_dtype(x):
-        return tf.zeros_like(x, tf.bool)
-    else:
-        return tf.math.is_inf(x)
+    return tf.zeros_like(x, tf.bool) if ivy.is_int_dtype(x) else tf.math.is_inf(x)
 
 
 def isnan(
@@ -327,10 +312,7 @@ def isnan(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if ivy.is_int_dtype(x):
-        return tf.zeros_like(x, tf.bool)
-    else:
-        return tf.math.is_nan(x)
+    return tf.zeros_like(x, tf.bool) if ivy.is_int_dtype(x) else tf.math.is_nan(x)
 
 
 def less(
@@ -504,14 +486,17 @@ def pow(
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
-    if isinstance(x1, tf.Tensor) and isinstance(x2, tf.Tensor):
-        if x1.dtype.is_unsigned or x2.dtype.is_unsigned:
-            promoted_type = tf.experimental.numpy.promote_types(x1.dtype, x2.dtype)
-            if x1.dtype.is_unsigned:
-                x1 = tf.cast(x1, tf.float64)
-            if x2.dtype.is_unsigned:
-                x2 = tf.cast(x2, tf.float64)
-            return tf.cast(tf.experimental.numpy.power(x1, x2), promoted_type)
+    if (
+        isinstance(x1, tf.Tensor)
+        and isinstance(x2, tf.Tensor)
+        and (x1.dtype.is_unsigned or x2.dtype.is_unsigned)
+    ):
+        promoted_type = tf.experimental.numpy.promote_types(x1.dtype, x2.dtype)
+        if x1.dtype.is_unsigned:
+            x1 = tf.cast(x1, tf.float64)
+        if x2.dtype.is_unsigned:
+            x2 = tf.cast(x2, tf.float64)
+        return tf.cast(tf.experimental.numpy.power(x1, x2), promoted_type)
     return tf.experimental.numpy.power(x1, x2)
 
 
@@ -541,10 +526,7 @@ def round(
     *,
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
-    if "int" in str(x.dtype):
-        return x
-    else:
-        return tf.round(x)
+    return x if "int" in str(x.dtype) else tf.round(x)
 
 
 def sign(
@@ -635,8 +617,8 @@ def trunc(
     ret = x
     if not ivy.is_array(x):
         raise ivy.exceptions.IvyException("Input must be array")
-    elif not ("int" in str(x.dtype)):
-        if not ret.get_shape().ndims == 0:
+    elif "int" not in str(x.dtype):
+        if ret.get_shape().ndims != 0:
             ret = tf.tensor_scatter_nd_update(
                 x, tf.where(tf.greater_equal(x, 0)), tf.math.floor(x[x >= 0])
             )

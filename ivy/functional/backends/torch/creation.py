@@ -35,14 +35,16 @@ def _differentiable_linspace(start, stop, num, *, device, dtype=None):
     increments = increment_tiled * torch.linspace(
         1, n_m_1, n_m_1, device=device, dtype=dtype
     )
-    res = torch.cat(
-        (torch.unsqueeze(torch.tensor(start, dtype=dtype), 0), start + increments), 0
+    return torch.cat(
+        (
+            torch.unsqueeze(torch.tensor(start, dtype=dtype), 0),
+            start + increments,
+        ),
+        0,
     )
-    return res
 
 
 @with_unsupported_dtypes({"1.11.0 and below": ("float16",)}, backend_version)
-# noinspection PyUnboundLocalVariable,PyShadowingNames
 def arange(
     start: float,
     /,
@@ -57,20 +59,25 @@ def arange(
         stop = start
         start = 0
     if (step > 0 and start > stop) or (step < 0 and start < stop):
-        if isinstance(stop, float):
-            stop = float(start)
-        else:
-            stop = start
+        stop = float(start) if isinstance(stop, float) else start
     if dtype is None:
-        if isinstance(start, int) and isinstance(stop, int) and isinstance(step, int):
-            return torch.arange(
-                start, stop, step=step, dtype=torch.int64, device=device, out=out
+        return (
+            torch.arange(
+                start,
+                stop,
+                step=step,
+                dtype=torch.int64,
+                device=device,
+                out=out,
             ).to(torch.int32)
-        else:
-            return torch.arange(start, stop, step=step, device=device, out=out)
-    else:
-        dtype = ivy.as_native_dtype(ivy.default_dtype(dtype=dtype))
-        return torch.arange(start, stop, step=step, dtype=dtype, device=device, out=out)
+            if isinstance(start, int)
+            and isinstance(stop, int)
+            and isinstance(step, int)
+            else torch.arange(start, stop, step=step, device=device, out=out)
+        )
+
+    dtype = ivy.as_native_dtype(ivy.default_dtype(dtype=dtype))
+    return torch.arange(start, stop, step=step, dtype=dtype, device=device, out=out)
 
 
 arange.support_native_out = True
@@ -107,26 +114,24 @@ def asarray(
         if dtype is None:
             dtype = ivy.default_dtype(item=obj, as_native=True)
 
-        # if `obj` is a list of specifically tensors
         if isinstance(obj[0], torch.Tensor):
-            if copy is True:
-                return (
+            return (
+                (
                     torch.stack([torch.as_tensor(i, dtype=dtype) for i in obj])
                     .clone()
                     .detach()
                     .to(device)
                 )
-            else:
-                return torch.stack(
-                    tuple([torch.as_tensor(i, dtype=dtype) for i in obj])
+                if copy is True
+                else torch.stack(
+                    tuple(torch.as_tensor(i, dtype=dtype) for i in obj)
                 ).to(device)
+            )
 
-        # if obj is a list of other objects, expected to be a numerical type.
+        if copy is True:
+            return torch.as_tensor(obj, dtype=dtype).clone().detach().to(device)
         else:
-            if copy is True:
-                return torch.as_tensor(obj, dtype=dtype).clone().detach().to(device)
-            else:
-                return torch.as_tensor(obj, dtype=dtype).to(device)
+            return torch.as_tensor(obj, dtype=dtype).to(device)
 
     elif isinstance(obj, np.ndarray) and dtype is None:
         dtype = ivy.as_native_dtype(ivy.as_ivy_dtype(obj.dtype.name))
@@ -143,10 +148,10 @@ def asarray(
 
     if copy is True:
         ret = torch.as_tensor(obj, dtype=dtype).clone().detach()
-        return ret.to(device) if ret.device != device else ret
     else:
         ret = torch.as_tensor(obj, dtype=dtype)
-        return ret.to(device) if ret.device != device else ret
+
+    return ret.to(device) if ret.device != device else ret
 
 
 def empty(
@@ -232,9 +237,7 @@ def eye(
         ret = torch.zeros(
             batch_shape + [n_rows, n_cols], dtype=dtype, device=device, out=out
         )
-    if out is not None:
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if out is not None else ret
 
 
 eye.support_native_out = True
@@ -346,11 +349,11 @@ def linspace_helper(start, stop, num, axis=None, *, device, dtype):
         if num == 1:
             return (
                 torch.ones(
-                    stop_shape[:axis] + [1] + stop_shape[axis:],
-                    device=device,
+                    sos_shape[:axis] + [1] + sos_shape[axis:], device=device
                 )
                 * start
             )
+
         stop = stop.reshape((-1,))
         linspace_method = (
             _differentiable_linspace if stop.requires_grad else torch.linspace
@@ -370,7 +373,7 @@ def linspace_helper(start, stop, num, axis=None, *, device, dtype):
                 for strt, stp in zip(start, stop)
             ]
         torch.cat(res, -1).reshape(start_shape + [num])
-    elif start_is_array and not stop_is_array:
+    elif start_is_array:
         if num < start.shape[0]:
             start = start.unsqueeze(-1)
             diff = stop - start
@@ -383,7 +386,7 @@ def linspace_helper(start, stop, num, axis=None, *, device, dtype):
                 linspace_method(strt, stop, num, device=device, dtype=dtype)
                 for strt in start
             ]
-    elif not start_is_array and stop_is_array:
+    elif stop_is_array:
         if num < stop.shape[0]:
             stop = stop.unsqueeze(-1)
             diff = stop - start
@@ -552,10 +555,12 @@ def one_hot(
         if on_none and off_none:
             dtype = torch.float32
         else:
-            if not on_none:
-                dtype = torch.tensor(on_value).dtype
-            elif not off_none:
-                dtype = torch.tensor(off_value).dtype
+            dtype = (
+                torch.tensor(off_value).dtype
+                if on_none
+                else torch.tensor(on_value).dtype
+            )
+
     else:
         dtype = ivy.as_native_dtype(dtype)
 

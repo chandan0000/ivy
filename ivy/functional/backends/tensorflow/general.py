@@ -20,14 +20,14 @@ _round = round
 
 
 def _parse_index(indices, ndims):
-    ind = list()
+    ind = []
     for so in indices:
-        pre = list()
+        pre = []
         for s in so:
             if s == -1:
                 break
             pre.append(s.numpy())
-        post = list()
+        post = []
         for s in reversed(so):
             if s == -1:
                 break
@@ -43,10 +43,10 @@ def _parse_index(indices, ndims):
 
 
 def is_native_array(x, /, *, exclusive=False):
-    if isinstance(x, tf.Tensor) or isinstance(x, tf.Variable):
-        if exclusive and isinstance(x, tf.Variable):
-            return False
-        return True
+    if isinstance(x, tf.Tensor):
+        return not exclusive or not isinstance(x, tf.Variable)
+    elif isinstance(x, tf.Variable):
+        return not exclusive
     return False
 
 
@@ -104,9 +104,7 @@ def to_numpy(x: Union[tf.Tensor, tf.Variable], /, *, copy: bool = True) -> np.nd
 
 def to_scalar(x: Union[tf.Tensor, tf.Variable], /) -> Number:
     ret = to_numpy(x).item()
-    if x.dtype == tf.bfloat16:
-        return float(ret)
-    return ret
+    return float(ret) if x.dtype == tf.bfloat16 else ret
 
 
 def to_list(x: Union[tf.Tensor, tf.Variable], /) -> list:
@@ -162,11 +160,10 @@ def inplace_decrement(
             x.data = x_native
         else:
             x = ivy.Array(x_native)
+    elif ivy.is_ivy_array(x):
+        x.data -= val_native
     else:
-        if ivy.is_ivy_array(x):
-            x.data -= val_native
-        else:
-            x = ivy.Array(val_native)
+        x = ivy.Array(val_native)
     return x
 
 
@@ -194,26 +191,25 @@ def inplace_update(
     val: Union[ivy.Array, tf.Tensor],
     ensure_in_backend: bool = False,
 ) -> ivy.Array:
-    if ivy.is_array(x) and ivy.is_array(val):
-        (x_native, val_native), _ = ivy.args_to_native(x, val)
-        x_native.data = val_native
-        if ivy.is_variable(x_native):
-            x_native.assign(val_native)
-            if ivy.is_ivy_array(x):
-                x.data = x_native
-            else:
-                x = ivy.Array(x_native)
-        elif ensure_in_backend:
-            raise ivy.exceptions.IvyException(
-                "TensorFlow does not support inplace updates of the tf.Tensor"
-            )
-        elif ivy.is_ivy_array(x):
-            x.data = val_native
-        else:
-            x = ivy.to_ivy(x_native)
-        return x
-    else:
+    if not ivy.is_array(x) or not ivy.is_array(val):
         return val
+    (x_native, val_native), _ = ivy.args_to_native(x, val)
+    x_native.data = val_native
+    if ivy.is_variable(x_native):
+        x_native.assign(val_native)
+        if ivy.is_ivy_array(x):
+            x.data = x_native
+        else:
+            x = ivy.Array(x_native)
+    elif ensure_in_backend:
+        raise ivy.exceptions.IvyException(
+            "TensorFlow does not support inplace updates of the tf.Tensor"
+        )
+    elif ivy.is_ivy_array(x):
+        x.data = val_native
+    else:
+        x = ivy.to_ivy(x_native)
+    return x
 
 
 def inplace_variables_supported():
@@ -246,37 +242,43 @@ def scatter_flat(
         ivy.assertions.check_equal(len(target.shape), 1)
         ivy.assertions.check_equal(target.shape[0], size)
     dtype = updates.dtype
-    if reduction == "sum":
-        if target_given:
-            return tf.tensor_scatter_nd_add(out, tf.expand_dims(indices, -1), updates)
-        return tf.scatter_nd(tf.expand_dims(indices, -1), updates, [size])
+    if reduction == "max":
+        if not target_given:
+            target = tf.fill([size], tf.cast(-1e12, dtype))
+        res = tf.tensor_scatter_nd_max(target, tf.expand_dims(indices, -1), updates)
+        if not target_given:
+            res = tf.where(res == tf.cast(-1e12, dtype), 0, res)
     elif reduction == "min":
         if not target_given:
             target = tf.fill([size], tf.cast(1e12, dtype))
         res = tf.tensor_scatter_nd_min(target, tf.expand_dims(indices, -1), updates)
         if not target_given:
             res = tf.where(res == tf.cast(1e12, dtype), 0, res)
-    elif reduction == "max":
-        if not target_given:
-            target = tf.fill([size], tf.cast(-1e12, dtype))
-        res = tf.tensor_scatter_nd_max(target, tf.expand_dims(indices, -1), updates)
-        if not target_given:
-            res = tf.where(res == tf.cast(-1e12, dtype), 0, res)
     elif reduction == "replace":
-        if target_given:
-            res = tf.tensor_scatter_nd_update(out, tf.expand_dims(indices, -1), updates)
-        else:
-            res = tf.tensor_scatter_nd_update(
+        res = (
+            tf.tensor_scatter_nd_update(
+                out, tf.expand_dims(indices, -1), updates
+            )
+            if target_given
+            else tf.tensor_scatter_nd_update(
                 tf.zeros([size], dtype=updates.dtype),
                 tf.expand_dims(indices, -1),
                 updates,
             )
+        )
+
+    elif reduction == "sum":
+        return (
+            tf.tensor_scatter_nd_add(out, tf.expand_dims(indices, -1), updates)
+            if target_given
+            else tf.scatter_nd(tf.expand_dims(indices, -1), updates, [size])
+        )
+
     else:
         raise ivy.exceptions.IvyException(
-            'reduction is {}, but it must be one of "sum", "min" or "max"'.format(
-                reduction
-            )
+            f'reduction is {reduction}, but it must be one of "sum", "min" or "max"'
         )
+
     return res
 
 
@@ -390,71 +392,84 @@ def scatter_nd(
         ivy.assertions.check_equal(ivy.Shape(target.shape), ivy.Shape(shape))
     shape = list(shape) if ivy.exists(shape) else list(out.shape)
     dtype = updates.dtype
-    if reduction == "sum":
-        if target_given:
-            res = tf.tensor_scatter_nd_add(out, indices, updates)
-        else:
-            res = tf.scatter_nd(indices, updates, shape)
-    elif reduction == "min":
+    if reduction == "max":
         if not target_given:
-            if "int" in dtype.name:
-                max_value = tf.cast(
-                    min(
-                        tf.experimental.numpy.iinfo(updates.dtype.as_numpy_dtype).max,
-                        1e12,
-                    ),
-                    updates.dtype,
-                )
-            else:
-                max_value = tf.cast(
-                    min(
-                        tf.experimental.numpy.finfo(updates.dtype.as_numpy_dtype).max,
-                        1e12,
-                    ),
-                    updates.dtype,
-                )
-            target = tf.fill(shape, max_value)
-        res = tf.tensor_scatter_nd_min(target, indices, updates)
-        if not target_given:
-            res = tf.where(res == max_value, 0, res)
-    elif reduction == "max":
-        if not target_given:
-            if "int" in dtype.name:
-                min_value = tf.cast(
+            min_value = (
+                tf.cast(
                     max(
-                        tf.experimental.numpy.iinfo(updates.dtype.as_numpy_dtype).min,
+                        tf.experimental.numpy.iinfo(
+                            updates.dtype.as_numpy_dtype
+                        ).min,
                         -1e12,
                     ),
                     updates.dtype,
                 )
-            else:
-                min_value = tf.cast(
+                if "int" in dtype.name
+                else tf.cast(
                     max(
-                        tf.experimental.numpy.finfo(updates.dtype.as_numpy_dtype).min,
+                        tf.experimental.numpy.finfo(
+                            updates.dtype.as_numpy_dtype
+                        ).min,
                         -1e12,
                     ),
                     updates.dtype,
                 )
+            )
+
             target = tf.fill(shape, min_value)
         res = tf.tensor_scatter_nd_max(target, indices, updates)
         if not target_given:
             res = tf.where(res == min_value, 0, res)
+    elif reduction == "min":
+        if not target_given:
+            max_value = (
+                tf.cast(
+                    min(
+                        tf.experimental.numpy.iinfo(
+                            updates.dtype.as_numpy_dtype
+                        ).max,
+                        1e12,
+                    ),
+                    updates.dtype,
+                )
+                if "int" in dtype.name
+                else tf.cast(
+                    min(
+                        tf.experimental.numpy.finfo(
+                            updates.dtype.as_numpy_dtype
+                        ).max,
+                        1e12,
+                    ),
+                    updates.dtype,
+                )
+            )
+
+            target = tf.fill(shape, max_value)
+        res = tf.tensor_scatter_nd_min(target, indices, updates)
+        if not target_given:
+            res = tf.where(res == max_value, 0, res)
     elif reduction == "replace":
-        if target_given:
-            res = tf.tensor_scatter_nd_update(out, indices, updates)
-        else:
-            res = tf.tensor_scatter_nd_update(
+        res = (
+            tf.tensor_scatter_nd_update(out, indices, updates)
+            if target_given
+            else tf.tensor_scatter_nd_update(
                 tf.zeros(shape, dtype=dtype), indices, updates
             )
+        )
+
+    elif reduction == "sum":
+        res = (
+            tf.tensor_scatter_nd_add(out, indices, updates)
+            if target_given
+            else tf.scatter_nd(indices, updates, shape)
+        )
+
     else:
         raise ivy.exceptions.IvyException(
-            'reduction is {}, but it must be one of "sum", "min" or "max"'.format(
-                reduction
-            )
+            f'reduction is {reduction}, but it must be one of "sum", "min" or "max"'
         )
-    if ivy.exists(out):
-        return ivy.inplace_update(out, res)
-    return res
+
+    return ivy.inplace_update(out, res) if ivy.exists(out) else res
 
 
 scatter_nd.support_native_out = True
@@ -522,7 +537,7 @@ def vmap(
 
         # Handling None in in_axes by broadcasting the axis_size
         if isinstance(in_axes, (tuple, list)) and None in in_axes:
-            none_axis_index = list()
+            none_axis_index = []
             for index, axis in enumerate(in_axes):
                 if axis is None:
                     none_axis_index.append(index)
