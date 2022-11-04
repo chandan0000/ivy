@@ -265,15 +265,15 @@ multiply = mul
 
 @to_ivy_arrays_and_back
 def div(input, other, *, rounding_mode=None, out=None):
-    if rounding_mode is not None:
-        input, other = torch_frontend.promote_types_of_torch_inputs(input, other)
-        promoted = input.dtype
-        if rounding_mode == "trunc":
-            return ivy.trunc_divide(input, other, out=out).astype(promoted)
-        else:
-            return ivy.floor_divide(input, other, out=out).astype(promoted)
-    else:
+    if rounding_mode is None:
         return ivy.divide(input, other, out=out)
+    input, other = torch_frontend.promote_types_of_torch_inputs(input, other)
+    promoted = input.dtype
+    return (
+        ivy.trunc_divide(input, other, out=out).astype(promoted)
+        if rounding_mode == "trunc"
+        else ivy.floor_divide(input, other, out=out).astype(promoted)
+    )
 
 
 @to_ivy_arrays_and_back

@@ -12,9 +12,7 @@ def cond(pred, true_fun, false_fun, *operands, operand=None, linear=None):
             )
         operands = (operand,)
 
-    if pred:
-        return true_fun(*operands)
-    return false_fun(*operands)
+    return true_fun(*operands) if pred else false_fun(*operands)
 
 
 @to_ivy_arrays_and_back

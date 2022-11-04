@@ -64,10 +64,9 @@ def elu(x, alpha=1.0):
     zeros = ivy.zeros_like(x, dtype=ivy.dtype(x))
     ones = ivy.ones_like(x, dtype=ivy.dtype(x))
     alpha = ivy.astype(ivy.array(alpha), ivy.dtype(x))
-    ret_val = ivy.where(
+    return ivy.where(
         x > zeros, x, ivy.multiply(alpha, ivy.subtract(ivy.exp(x), ones))
     )
-    return ret_val
 
 
 elu.supported_dtypes = {

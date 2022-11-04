@@ -21,10 +21,7 @@ def dirichlet(
 ) -> Union[tf.Tensor, tf.Variable]:
     size = size if size is not None else len(alpha)
 
-    if dtype is None:
-        dtype = tf.float64
-    else:
-        dtype = dtype
+    dtype = tf.float64 if dtype is None else dtype
     if seed is not None:
         tf.random.set_seed(seed)
     return tf.cast(

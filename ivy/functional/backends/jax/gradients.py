@@ -127,11 +127,9 @@ def stop_gradient(
 
 def jac(func: Callable):
     grad_fn = lambda x_in: ivy.to_native(func(x_in))
-    callback_fn = lambda x_in: ivy.to_ivy(jax.jacfwd(grad_fn)((ivy.to_native(x_in))))
-    return callback_fn
+    return lambda x_in: ivy.to_ivy(jax.jacfwd(grad_fn)((ivy.to_native(x_in))))
 
 
 def grad(func: Callable):
     grad_fn = lambda x_in: ivy.to_native(func(x_in))
-    callback_fn = lambda x_in: ivy.to_ivy(jax.grad(grad_fn)(ivy.to_native(x_in)))
-    return callback_fn
+    return lambda x_in: ivy.to_ivy(jax.grad(grad_fn)(ivy.to_native(x_in)))

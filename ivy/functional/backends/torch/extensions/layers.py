@@ -30,11 +30,12 @@ def vorbis_window(
         [
             round(
                 math.sin(
-                    (ivy.pi / 2) * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
+                    (ivy.pi / 2)
+                    * (math.sin(ivy.pi * (i) / (window_length * 2)) ** 2)
                 ),
                 8,
             )
-            for i in range(1, window_length * 2)[0::2]
+            for i in range(1, window_length * 2)[::2]
         ],
         dtype=dtype,
     )
@@ -97,15 +98,13 @@ def max_pool2d(
         [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2],
         value=float("-inf"),
     )
-    if padding != "VALID" and padding != "SAME":
+    if padding not in ["VALID", "SAME"]:
         raise ivy.exceptions.IvyException(
-            "Invalid padding arg {}\n"
-            'Must be one of: "VALID" or "SAME"'.format(padding)
+            f'Invalid padding arg {padding}\nMust be one of: "VALID" or "SAME"'
         )
+
     res = torch.nn.functional.max_pool2d(x, kernel, strides, 0)
-    if data_format == "NHWC":
-        return res.permute(0, 2, 3, 1)
-    return res
+    return res.permute(0, 2, 3, 1) if data_format == "NHWC" else res
 
 
 @with_unsupported_dtypes({"1.11.0 and below": ("bfloat16", "float16")}, backend_version)
@@ -230,11 +229,11 @@ def max_pool3d(
         ],
         value=float("-inf"),
     )
-    if padding != "VALID" and padding != "SAME":
+    if padding not in ["VALID", "SAME"]:
         raise ivy.exceptions.IvyException(
-            "Invalid padding arg {}\n"
-            'Must be one of: "VALID" or "SAME"'.format(padding)
+            f'Invalid padding arg {padding}\nMust be one of: "VALID" or "SAME"'
         )
+
     res = torch.nn.functional.max_pool3d(x, kernel, strides, 0)
     if data_format == "NDHWC":
         res = res.permute(0, 2, 3, 4, 1)
@@ -286,11 +285,11 @@ def avg_pool3d(
         ],
         mode="replicate",
     )
-    if padding != "VALID" and padding != "SAME":
+    if padding not in ["VALID", "SAME"]:
         raise ivy.exceptions.IvyException(
-            "Invalid padding arg {}\n"
-            'Must be one of: "VALID" or "SAME"'.format(padding)
+            f'Invalid padding arg {padding}\nMust be one of: "VALID" or "SAME"'
         )
+
     res = torch.nn.functional.avg_pool3d(x, kernel, strides, 0)
     if data_format == "NDHWC":
         res = res.permute(0, 2, 3, 4, 1)

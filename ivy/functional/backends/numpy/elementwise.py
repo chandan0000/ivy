@@ -8,7 +8,7 @@ from ivy.functional.backends.numpy.helpers import _handle_0_dim_output
 
 try:
     from scipy.special import erf as _erf
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     _erf = None
 
 
@@ -190,9 +190,7 @@ def ceil(x: np.ndarray, /, *, out: Optional[np.ndarray] = None) -> np.ndarray:
         ret = np.copy(x)
     else:
         return np.ceil(x, out=out)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 ceil.support_native_out = True
@@ -271,9 +269,7 @@ def floor(x: np.ndarray, /, *, out: Optional[np.ndarray] = None) -> np.ndarray:
         ret = np.copy(x)
     else:
         return np.floor(x, out=out)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 floor.support_native_out = True
@@ -549,9 +545,7 @@ def round(x: np.ndarray, /, *, out: Optional[np.ndarray] = None) -> np.ndarray:
         ret = np.copy(x)
     else:
         return np.round(x, out=out)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 round.support_native_out = True
@@ -637,9 +631,7 @@ def trunc(x: np.ndarray, /, *, out: Optional[np.ndarray] = None) -> np.ndarray:
         ret = np.copy(x)
     else:
         return np.trunc(x, out=out)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 trunc.support_native_out = True
@@ -677,9 +669,7 @@ def maximum(
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     if use_where:
         ret = np.where(x1 >= x2, x1, x2)
-        if ivy.exists(out):
-            return ivy.inplace_update(out, ret)
-        return ret
+        return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
     return np.maximum(x1, x2, out=out)
 
 
@@ -698,9 +688,7 @@ def minimum(
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     if use_where:
         ret = np.where(x1 <= x2, x1, x2)
-        if ivy.exists(out):
-            return ivy.inplace_update(out, ret)
-        return ret
+        return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
     return np.minimum(x1, x2, out=out)
 
 

@@ -9,9 +9,7 @@ import ivy.functional.frontends.torch as torch_frontend
 
 
 def _from_torch_frontend_tensor_to_ivy_array(x):
-    if isinstance(x, torch_frontend.Tensor):
-        return x.data
-    return x
+    return x.data if isinstance(x, torch_frontend.Tensor) else x
 
 
 def _from_ivy_array_to_torch_frontend_tensor(x, nested=False, include_derived=None):

@@ -66,16 +66,15 @@ def isclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False):
     if ivy.all(finite_a) and ivy.all(finite_b):
         return _compute_isclose_with_tol(a, b, rtol, atol)
 
-    else:
-        finites = ivy.bitwise_and(finite_a, finite_b)
-        ret = ivy.zeros_like(finites)
-        ret_ = ret.astype(int)
-        a = a * ivy.ones_like(ret_)
-        b = b * ivy.ones_like(ret_)
-        ret[finites] = _compute_isclose_with_tol(a[finites], b[finites], rtol, atol)
-        nans = ivy.bitwise_invert(finites)
-        ret[nans] = ivy.equal(a[nans], b[nans])
-        if equal_nan:
-            both_nan = ivy.bitwise_and(ivy.isnan(a), ivy.isnan(b))
-            ret[both_nan] = both_nan[both_nan]
-        return ret
+    finites = ivy.bitwise_and(finite_a, finite_b)
+    ret = ivy.zeros_like(finites)
+    ret_ = ret.astype(int)
+    a = a * ivy.ones_like(ret_)
+    b = b * ivy.ones_like(ret_)
+    ret[finites] = _compute_isclose_with_tol(a[finites], b[finites], rtol, atol)
+    nans = ivy.bitwise_invert(finites)
+    ret[nans] = ivy.equal(a[nans], b[nans])
+    if equal_nan:
+        both_nan = ivy.bitwise_and(ivy.isnan(a), ivy.isnan(b))
+        ret[both_nan] = both_nan[both_nan]
+    return ret

@@ -130,10 +130,7 @@ class Array(
         self._device = ivy.dev(self._data)
         self._dev_str = ivy.as_ivy_dev(self._device)
         self._pre_repr = "ivy."
-        if "gpu" in self._dev_str:
-            self._post_repr = ", dev={})".format(self._dev_str)
-        else:
-            self._post_repr = ")"
+        self._post_repr = f", dev={self._dev_str})" if "gpu" in self._dev_str else ")"
         self.backend = ivy.current_backend_str()
 
     # Properties #
@@ -275,16 +272,11 @@ class Array(
         return self._data.__contains__(key)
 
     def __getstate__(self):
-        data_dict = dict()
-
-        # only pickle the native array
-        data_dict["data"] = self.data
-
-        # also store the local ivy framework that created this array
-        data_dict["backend"] = self.backend
-        data_dict["device_str"] = ivy.as_ivy_dev(self.device)
-
-        return data_dict
+        return {
+            "data": self.data,
+            "backend": self.backend,
+            "device_str": ivy.as_ivy_dev(self.device),
+        }
 
     def __setstate__(self, state):
         # we can construct other details of ivy.Array
@@ -502,18 +494,14 @@ class Array(
 
     def __float__(self):
         res = self._data.__float__()
-        if res is NotImplemented:
-            return res
-        return to_ivy(res)
+        return res if res is NotImplemented else to_ivy(res)
 
     def __int__(self):
         if hasattr(self._data, "__int__"):
             res = self._data.__int__()
         else:
             res = int(ivy.to_scalar(self._data))
-        if res is NotImplemented:
-            return res
-        return to_ivy(res)
+        return res if res is NotImplemented else to_ivy(res)
 
     def __bool__(self):
         return self._data.__bool__()

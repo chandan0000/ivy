@@ -16,9 +16,7 @@ def empty(
     memory_format=None,
 ):
     ret = ivy.empty(shape=size, dtype=dtype, device=device, out=out)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -35,17 +33,13 @@ def full(
     ret = ivy.full(
         shape=size, fill_value=fill_value, dtype=dtype, device=device, out=out
     )
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
 def ones(size, *, out=None, dtype=None, device=None, requires_grad=False):
     ret = ivy.ones(shape=size, dtype=dtype, device=device, out=out)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -64,17 +58,13 @@ def ones_like_v_0p4p0_and_above(
     memory_format=None,
 ):
     ret = ivy.ones_like(input, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
 def zeros(size, *, out=None, dtype=None, device=None, requires_grad=False):
     ret = ivy.zeros(shape=size, dtype=dtype, device=device, out=out)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -88,9 +78,7 @@ def zeros_like(
     memory_format=None,
 ):
     ret = ivy.zeros_like(input, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -106,9 +94,7 @@ def arange(
     requires_grad=False,
 ):
     ret = ivy.arange(start, stop=end, step=step, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -123,9 +109,7 @@ def range(
     requires_grad=False,
 ):
     ret = arange(start, stop=end, step=step, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -141,9 +125,7 @@ def linspace(
     requires_grad=False,
 ):
     ret = ivy.linspace(start, end, num=steps, dtype=dtype, device=device, out=out)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -162,9 +144,7 @@ def logspace(
     ret = ivy.logspace(
         start, end, num=steps, base=base, dtype=dtype, device=device, out=out
     )
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -172,9 +152,7 @@ def eye(
     n, m=None, *, out=None, dtype=None, layout=None, device=None, requires_grad=False
 ):
     ret = ivy.eye(n_rows=n, n_columns=m, dtype=dtype, device=device, out=out)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -188,9 +166,7 @@ def empty_like(
     memory_format=None,
 ):
     ret = ivy.empty_like(input, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back
@@ -205,9 +181,7 @@ def full_like(
     memory_format=None,
 ):
     ret = ivy.full_like(input, fill_value=fill_value, dtype=dtype, device=device)
-    if requires_grad:
-        return ivy.variable(ret)
-    return ret
+    return ivy.variable(ret) if requires_grad else ret
 
 
 @to_ivy_arrays_and_back

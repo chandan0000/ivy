@@ -322,8 +322,7 @@ class SparseArray:
             all_rows = self._csr_crow_indices.to_list()
             while row < total_rows:
                 cols = all_cols[all_rows[row] : all_rows[row + 1]]
-                for col in cols:
-                    all_coordinates.append([row, col])
+                all_coordinates.extend([row, col] for col in cols)
                 row += 1
         # make dense array
         ret = ivy.scatter_nd(

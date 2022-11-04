@@ -110,9 +110,7 @@ def closest_valid_dtype(type):
     if type is None:
         return ivy.default_dtype()
     type_str = ivy.as_ivy_dtype(type)
-    if type_str in invalid_dtypes:
-        return {"bfloat16": float16}[type_str]
-    return type
+    return {"bfloat16": float16}[type_str] if type_str in invalid_dtypes else type
 
 
 backend = "numpy"

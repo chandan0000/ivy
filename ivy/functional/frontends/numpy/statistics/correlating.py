@@ -14,45 +14,48 @@ def correlate(a, v, mode=None, *, old_behavior=False):
     if a.shape[0] >= v.shape[0]:
         if mode == "full":
             r = n + m - 1
-            for j in range(0, n - 1):
+            for _ in range(n - 1):
                 a = ivy.concat((ivy.array(0), a), axis=None)
         elif mode == "same":
             r = m
             right_pad = (n - 1) // 2
             left_pad = (n - 1) - (n - 1) // 2
-            for j in range(0, left_pad):
+            for _ in range(left_pad):
                 a = ivy.concat((ivy.array(0), a), axis=None)
-            for j in range(0, right_pad):
+            for _ in range(right_pad):
                 a = ivy.concat((a, ivy.array(0)), axis=None)
         elif mode == "valid":
             r = m - n + 1
         else:
             raise ivy.exceptions.IvyException("invalid mode")
-        ret = ivy.array(
-            [(v[:n] * ivy.roll(a, -t)[:n]).sum().tolist() for t in range(0, r)],
+        return ivy.array(
+            [(v[:n] * ivy.roll(a, -t)[:n]).sum().tolist() for t in range(r)],
             dtype=max(dtypes),
         )
+
     else:
         if mode == "full":
             r = n + m - 1
-            for j in range(0, n - 1):
+            for _ in range(n - 1):
                 v = ivy.concat((ivy.array(0), v), axis=None)
         elif mode == "same":
             r = m
             right_pad = (n - 1) // 2
             left_pad = (n - 1) - (n - 1) // 2
-            for j in range(0, left_pad):
+            for _ in range(left_pad):
                 v = ivy.concat((ivy.array(0), v), axis=None)
-            for j in range(0, right_pad):
+            for _ in range(right_pad):
                 v = ivy.concat((v, ivy.array(0)), axis=None)
         elif mode == "valid":
             r = m - n + 1
         else:
             raise ivy.exceptions.IvyException("invalid mode")
-        ret = ivy.flip(
+        return ivy.flip(
             ivy.array(
-                [(a[:n] * ivy.roll(v, -t)[:n]).sum().tolist() for t in range(0, r)],
+                [
+                    (a[:n] * ivy.roll(v, -t)[:n]).sum().tolist()
+                    for t in range(r)
+                ],
                 dtype=max(dtypes),
             )
         )
-    return ret

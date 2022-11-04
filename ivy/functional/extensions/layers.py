@@ -290,10 +290,7 @@ def _scatter_at_0_axis(input, value, start=None, end=None):
         value = ivy.flatten(value)
     for ind in ivy.ndindex(input.shape):
         if (ind[0] < end) and (ind[0] >= start):
-            if len(value.shape) >= 1:
-                input[ind] = value[i]
-            else:
-                input[ind] = value
+            input[ind] = value[i] if len(value.shape) >= 1 else value
             i += 1
     return input
 
@@ -433,18 +430,20 @@ def _pad_simple(array, pad_width, fill_value=None):
     padded = ivy.zeros(new_shape, dtype=array.dtype)
     if fill_value is not None:
         padded = ivy.ones_like(padded) * fill_value
-    sl = []
-    for size, (left, right) in zip(array.shape, pad_width):
-        sl.append(ivy.arange(left, left + size))
+    sl = [
+        ivy.arange(left, left + size)
+        for size, (left, right) in zip(array.shape, pad_width)
+    ]
+
     if len(array.shape) > 1:
         array = ivy.flatten(array)
     j = 0
     for ind in ivy.ndindex(padded.shape):
-        flag = True
-        for i, k in enumerate(ind):
-            if ivy.argwhere(sl[i] - k).shape[0] == sl[i].shape[0]:
-                flag = False
-                break
+        flag = all(
+            ivy.argwhere(sl[i] - k).shape[0] != sl[i].shape[0]
+            for i, k in enumerate(ind)
+        )
+
         if flag:
             padded[ind] = array[j]
             j += 1
@@ -673,7 +672,7 @@ def pad(
             padded = _set_pad_area(padded, width_pair, stat_pair)
             padded = ivy.moveaxis(padded, 0, -1)
     elif mode in {"reflect", "symmetric"}:
-        include_edge = True if mode == "symmetric" else False
+        include_edge = mode == "symmetric"
         for axis, (left_index, right_index) in zip(axes, pad_width):
             if input.shape[0] == 1 and (left_index > 0 or right_index > 0):
                 edge_pair = _get_edges(padded, (left_index, right_index))
@@ -739,18 +738,18 @@ def kaiser_bessel_derived_window(
     >>> ivy.kaiser_derived_window(5, False, 5)
     ivy.array([0.18493208, 0.9827513 , 0.9827513 , 0.18493208])
     """
-    window_length = window_length // 2
+    window_length //= 2
     w = ivy.kaiser_window(window_length + 1, periodic, beta)
 
-    sum_i_N = sum([w[i] for i in range(0, window_length + 1)])
+    sum_i_N = sum(w[i] for i in range(window_length + 1))
 
     def sum_i_n(n):
-        return sum([w[i] for i in range(0, n + 1)])
+        return sum(w[i] for i in range(n + 1))
 
-    dn_low = [sqrt(sum_i_n(i) / sum_i_N) for i in range(0, window_length)]
+    dn_low = [sqrt(sum_i_n(i) / sum_i_N) for i in range(window_length)]
 
     def sum_2N_1_n(n):
-        return sum([w[i] for i in range(0, 2 * window_length - n)])
+        return sum(w[i] for i in range(2 * window_length - n))
 
     dn_mid = [
         sqrt(sum_2N_1_n(i) / sum_i_N) for i in range(window_length, 2 * window_length)
@@ -810,25 +809,25 @@ def hamming_window(
     elif window_length == 1:
         return ivy.array([1])
     else:
-        if periodic is True:
-            window_length = window_length + 1
+        if periodic is not True:
             return ivy.array(
                 [
                     alpha - beta * cos((2 * n * pi) / (window_length - 1))
-                    for n in range(0, window_length)
-                ][:-1],
-                dtype=dtype,
-                out=out,
-            )
-        else:
-            return ivy.array(
-                [
-                    alpha - beta * cos((2 * n * pi) / (window_length - 1))
-                    for n in range(0, window_length)
+                    for n in range(window_length)
                 ],
                 dtype=dtype,
                 out=out,
             )
+
+        window_length += 1
+        return ivy.array(
+            [
+                alpha - beta * cos((2 * n * pi) / (window_length - 1))
+                for n in range(window_length)
+            ][:-1],
+            dtype=dtype,
+            out=out,
+        )
 
 
 @to_native_arrays_and_back

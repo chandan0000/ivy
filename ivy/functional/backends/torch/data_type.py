@@ -97,13 +97,17 @@ def can_cast(from_: Union[torch.dtype, torch.Tensor], to: torch.dtype, /) -> boo
         return False
     if "int" in from_str and (("float" in to_str) or ("bool" in to_str)):
         return False
-    if "float" in from_str and "bool" in to_str:
-        return False
-    if "float" in from_str and "int" in to_str:
-        return False
-    if "uint" in from_str and ("int" in to_str and "u" not in to_str):
-        if ivy.dtype_bits(to) <= ivy.dtype_bits(from_):
+    if "float" in from_str:
+        if "bool" in to_str:
             return False
+        if "int" in to_str:
+            return False
+    if (
+        "uint" in from_str
+        and ("int" in to_str and "u" not in to_str)
+        and ivy.dtype_bits(to) <= ivy.dtype_bits(from_)
+    ):
+        return False
     if "float16" in from_str and "float16" in to_str:
         return from_str == to_str
     return True
@@ -176,9 +180,7 @@ def as_native_dtype(dtype_in: Union[torch.dtype, str]) -> torch.dtype:
 
 
 def dtype(x: torch.tensor, as_native: bool = False) -> ivy.Dtype:
-    if as_native:
-        return ivy.to_native(x).dtype
-    return as_ivy_dtype(x.dtype)
+    return ivy.to_native(x).dtype if as_native else as_ivy_dtype(x.dtype)
 
 
 def dtype_bits(dtype_in: Union[torch.dtype, str]) -> int:

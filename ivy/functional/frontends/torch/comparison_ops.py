@@ -95,21 +95,20 @@ def isclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False):
     if ivy.all(finite_input) and ivy.all(finite_other):
         return _compute_isclose_with_tol(input, other, rtol, atol)
 
-    else:
-        finites = ivy.bitwise_and(finite_input, finite_other)
-        ret = ivy.zeros_like(finites)
-        ret_ = ret.astype(int)
-        input = input * ivy.ones_like(ret_)
-        other = other * ivy.ones_like(ret_)
-        ret[finites] = _compute_isclose_with_tol(
-            input[finites], other[finites], rtol, atol
-        )
-        nans = ivy.bitwise_invert(finites)
-        ret[nans] = ivy.equal(input[nans], other[nans])
-        if equal_nan:
-            both_nan = ivy.bitwise_and(ivy.isnan(input), ivy.isnan(other))
-            ret[both_nan] = both_nan[both_nan]
-        return ret
+    finites = ivy.bitwise_and(finite_input, finite_other)
+    ret = ivy.zeros_like(finites)
+    ret_ = ret.astype(int)
+    input = input * ivy.ones_like(ret_)
+    other = other * ivy.ones_like(ret_)
+    ret[finites] = _compute_isclose_with_tol(
+        input[finites], other[finites], rtol, atol
+    )
+    nans = ivy.bitwise_invert(finites)
+    ret[nans] = ivy.equal(input[nans], other[nans])
+    if equal_nan:
+        both_nan = ivy.bitwise_and(ivy.isnan(input), ivy.isnan(other))
+        ret[both_nan] = both_nan[both_nan]
+    return ret
 
 
 @to_ivy_arrays_and_back
@@ -205,10 +204,7 @@ def isin(elements, test_elements, *, assume_unique=False, invert=False):
 
     order = ivy.argsort(ar, stable=True)
     sar = ar[order]
-    if invert:
-        bool_ar = sar[1:] != sar[:-1]
-    else:
-        bool_ar = sar[1:] == sar[:-1]
+    bool_ar = sar[1:] != sar[:-1] if invert else sar[1:] == sar[:-1]
     flag = ivy.concat((bool_ar, [invert]))
     ret = ivy.empty(ivy.shape(ar), dtype=bool)
     ret[order] = flag
@@ -274,9 +270,7 @@ def kthvalue(input, k, dim=-1, keepdim=False, *, out=None):
         indices = ivy.expand_dims(indices, axis=dim)
 
     ret = (values, indices)
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @to_ivy_arrays_and_back

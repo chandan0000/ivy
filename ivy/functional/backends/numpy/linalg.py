@@ -24,11 +24,9 @@ def cholesky(
     x: np.ndarray, /, *, upper: bool = False, out: Optional[np.ndarray] = None
 ) -> np.ndarray:
     if not upper:
-        ret = np.linalg.cholesky(x)
-    else:
-        axes = list(range(len(x.shape) - 2)) + [len(x.shape) - 1, len(x.shape) - 2]
-        ret = np.transpose(np.linalg.cholesky(np.transpose(x, axes=axes)), axes=axes)
-    return ret
+        return np.linalg.cholesky(x)
+    axes = list(range(len(x.shape) - 2)) + [len(x.shape) - 1, len(x.shape) - 2]
+    return np.transpose(np.linalg.cholesky(np.transpose(x, axes=axes)), axes=axes)
 
 
 def cross(
@@ -99,14 +97,9 @@ def inv(
 ) -> np.ndarray:
     if np.any(np.linalg.det(x.astype("float64")) == 0):
         return x
-    else:
-        if adjoint is False:
-            ret = np.linalg.inv(x)
-            return ret
-        else:
-            x = np.transpose(x)
-            ret = np.linalg.inv(x)
-            return ret
+    if adjoint:
+        x = np.transpose(x)
+    return np.linalg.inv(x)
 
 
 def matmul(
@@ -118,9 +111,9 @@ def matmul(
     transpose_b: bool = False,
     out: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    if transpose_a is True:
+    if transpose_a:
         x1 = np.transpose(x1)
-    if transpose_b is True:
+    if transpose_b:
         x2 = np.transpose(x2)
     ret = np.matmul(x1, x2, out=out)
     if len(x1.shape) == len(x2.shape) == 1:
@@ -208,10 +201,7 @@ def pinv(
     rtol: Optional[Union[float, Tuple[float]]] = None,
     out: Optional[np.ndarray] = None,
 ) -> np.ndarray:
-    if rtol is None:
-        return np.linalg.pinv(x)
-    else:
-        return np.linalg.pinv(x, rtol)
+    return np.linalg.pinv(x) if rtol is None else np.linalg.pinv(x, rtol)
 
 
 @with_unsupported_dtypes({"1.23.0 and below": ("float16",)}, backend_version)
@@ -228,10 +218,13 @@ def slogdet(
 ) -> Tuple[np.ndarray, np.ndarray]:
     results = NamedTuple("slogdet", [("sign", np.ndarray), ("logabsdet", np.ndarray)])
     sign, logabsdet = np.linalg.slogdet(x)
-    sign = np.asarray(sign) if not isinstance(sign, np.ndarray) else sign
+    sign = sign if isinstance(sign, np.ndarray) else np.asarray(sign)
     logabsdet = (
-        np.asarray(logabsdet) if not isinstance(logabsdet, np.ndarray) else logabsdet
+        logabsdet
+        if isinstance(logabsdet, np.ndarray)
+        else np.asarray(logabsdet)
     )
+
 
     return results(sign, logabsdet)
 
@@ -242,11 +235,10 @@ def solve(
 ) -> np.ndarray:
     expanded_last = False
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
-    if len(x2.shape) <= 1:
-        if x2.shape[-1] == x1.shape[-1]:
-            expanded_last = True
-            x2 = np.expand_dims(x2, axis=1)
-    for i in range(len(x1.shape) - 2):
+    if len(x2.shape) <= 1 and x2.shape[-1] == x1.shape[-1]:
+        expanded_last = True
+        x2 = np.expand_dims(x2, axis=1)
+    for _ in range(len(x1.shape) - 2):
         x2 = np.expand_dims(x2, axis=0)
     ret = np.linalg.solve(x1, x2)
     if expanded_last:
@@ -322,11 +314,11 @@ def vector_norm(
     else:
         np_normalized_vector = np.linalg.norm(x, ord, axis, keepdims)
 
-    if np_normalized_vector.shape == tuple():
-        ret = np.expand_dims(np_normalized_vector, 0)
-    else:
-        ret = np_normalized_vector
-    return ret
+    return (
+        np.expand_dims(np_normalized_vector, 0)
+        if np_normalized_vector.shape == tuple()
+        else np_normalized_vector
+    )
 
 
 # Extra #

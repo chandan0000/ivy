@@ -10,19 +10,18 @@ def median(
     keepdims: Optional[bool] = False,
     out: Optional[torch.tensor] = None,
 ) -> torch.tensor:
-    if hasattr(axis, "__iter__"):
-        for dim in axis:
-            input = torch.median(
-                input,
-                dim=dim,
-                keepdim=keepdims,
-                out=out,
-            )
-        return input
-    else:
+    if not hasattr(axis, "__iter__"):
         return torch.median(
             input,
             dim=axis,
             keepdim=keepdims,
             out=out,
         )
+    for dim in axis:
+        input = torch.median(
+            input,
+            dim=dim,
+            keepdim=keepdims,
+            out=out,
+        )
+    return input

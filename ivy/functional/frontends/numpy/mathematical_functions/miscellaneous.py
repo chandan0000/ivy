@@ -65,10 +65,12 @@ def sqrt(
     subok=True,
 ):
     x = ivy.array(x)
-    ret = ivy.where(
-        ivy.broadcast_to(where, x.shape), ivy.sqrt(x), ivy.default(out, x), out=out
+    return ivy.where(
+        ivy.broadcast_to(where, x.shape),
+        ivy.sqrt(x),
+        ivy.default(out, x),
+        out=out,
     )
-    return ret
 
 
 @from_zero_dim_arrays_to_float
@@ -87,10 +89,12 @@ def cbrt(
 ):
     all_positive = ivy.pow(ivy.abs(x), 1.0 / 3.0)
     fixed_signs = ivy.where(ivy.less(x, 0.0), ivy.negative(all_positive), all_positive)
-    ret = ivy.where(
-        ivy.broadcast_to(where, x.shape), fixed_signs, ivy.default(out, x), out=out
+    return ivy.where(
+        ivy.broadcast_to(where, x.shape),
+        fixed_signs,
+        ivy.default(out, x),
+        out=out,
     )
-    return ret
 
 
 @from_zero_dim_arrays_to_float
@@ -107,10 +111,12 @@ def square(
     dtype=None,
     subok=True,
 ):
-    ret = ivy.where(
-        ivy.broadcast_to(where, x.shape), ivy.square(x), ivy.default(out, x), out=out
+    return ivy.where(
+        ivy.broadcast_to(where, x.shape),
+        ivy.square(x),
+        ivy.default(out, x),
+        out=out,
     )
-    return ret
 
 
 @from_zero_dim_arrays_to_float
@@ -127,10 +133,12 @@ def absolute(
     dtype=None,
     subok=True,
 ):
-    ret = ivy.where(
-        ivy.broadcast_to(where, x.shape), ivy.abs(x), ivy.default(out, x), out=out
+    return ivy.where(
+        ivy.broadcast_to(where, x.shape),
+        ivy.abs(x),
+        ivy.default(out, x),
+        out=out,
     )
-    return ret
 
 
 @from_zero_dim_arrays_to_float
@@ -147,10 +155,12 @@ def fabs(
     dtype=None,
     subok=True,
 ):
-    ret = ivy.where(
-        ivy.broadcast_to(where, x.shape), ivy.abs(x), ivy.default(out, x), out=out
+    return ivy.where(
+        ivy.broadcast_to(where, x.shape),
+        ivy.abs(x),
+        ivy.default(out, x),
+        out=out,
     )
-    return ret
 
 
 @from_zero_dim_arrays_to_float
@@ -245,8 +255,8 @@ def interp(x, xp, fp, left=None, right=None, period=None):
         asort_xp = ivy.argsort(xp)
         xp = xp[asort_xp]
         fp = fp[asort_xp]
-        xp = ivy.concat((xp[-1:] - period, xp, xp[0:1] + period))
-        fp = ivy.concat((fp[-1:], fp, fp[0:1]))
+        xp = ivy.concat((xp[-1:] - period, xp, xp[:1] + period))
+        fp = ivy.concat((fp[-1:], fp, fp[:1]))
 
     def interp_inner(value):
         if value < xp[0]:
@@ -268,11 +278,10 @@ def interp(x, xp, fp, left=None, right=None, period=None):
                     midpoint = (first + last) // 2
                     if xp[midpoint] == value:
                         return fp[midpoint]
+                    if value < xp[midpoint]:
+                        last = midpoint - 1
                     else:
-                        if value < xp[midpoint]:
-                            last = midpoint - 1
-                        else:
-                            first = midpoint + 1
+                        first = midpoint + 1
             dist = (value - xp[last]) / (xp[last + 1] - xp[last])
             return (fp[last + 1] - fp[last]) * dist + fp[last]
 

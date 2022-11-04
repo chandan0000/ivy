@@ -43,8 +43,7 @@ def gather(input, dim, index, *, sparse_grad=False, out=None):
 
     gather_indices = ivy.stack(gather_indices, axis=-1)
     gathered = ivy.gather_nd(input, gather_indices)
-    reshaped = ivy.reshape(gathered, index.shape)
-    return reshaped
+    return ivy.reshape(gathered, index.shape)
 
 
 @to_ivy_arrays_and_back
@@ -53,9 +52,7 @@ def nonzero(input, *, out=None, as_tuple=False):
     if as_tuple is False:
         ret = ivy.matrix_transpose(ivy.stack(ret))
 
-    if ivy.exists(out):
-        return ivy.inplace_update(out, ret)
-    return ret
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 @to_ivy_arrays_and_back
@@ -70,9 +67,8 @@ def reshape(input, shape):
 
 @to_ivy_arrays_and_back
 def squeeze(input, dim):
-    if isinstance(dim, int):
-        if input.shape[dim] > 1:
-            return input if ivy.is_ivy_array(input) else ivy.array(input)
+    if isinstance(dim, int) and input.shape[dim] > 1:
+        return input if ivy.is_ivy_array(input) else ivy.array(input)
     return ivy.squeeze(input, dim)
 
 
@@ -103,16 +99,11 @@ def tile(input, dims):
     except TypeError:
         tup = (dims,)
     d = len(tup)
-    res = 0
-    if len(input.shape) > len([dims]) - 1:
-        res = input
-    if d < input.ndim:
-        tup = (1,) * (input.ndim - d) + tup
-        res = ivy.tile(input, tup)
-
-    else:
-        res = ivy.tile(input, reps=dims, out=None)
-    return res
+    res = input if len(input.shape) > len([dims]) - 1 else 0
+    if d >= input.ndim:
+        return ivy.tile(input, reps=dims, out=None)
+    tup = (1,) * (input.ndim - d) + tup
+    return ivy.tile(input, tup)
 
 
 @to_ivy_arrays_and_back

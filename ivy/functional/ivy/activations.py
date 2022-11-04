@@ -502,17 +502,15 @@ def deserialize(
         if callable(obj) and fn_name in ACTIVATION_FUNCTIONS:
             activation_functions[fn_name] = obj
 
-    if isinstance(name, str):
-        if custom_objects and name in custom_objects:
-            fn_obj = custom_objects.get(name)
-        else:
-            fn_obj = activation_functions.get(name)
-            if fn_obj is None:
-                raise ValueError(f"Unknown activation function: {name}.")
-        return fn_obj
-
-    else:
+    if not isinstance(name, str):
         raise ValueError(f"Could not interpret serialized activation function: {name}")
+    if custom_objects and name in custom_objects:
+        fn_obj = custom_objects.get(name)
+    else:
+        fn_obj = activation_functions.get(name)
+        if fn_obj is None:
+            raise ValueError(f"Unknown activation function: {name}.")
+    return fn_obj
 
 
 ACTIVATION_FUNCTIONS = [

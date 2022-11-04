@@ -51,11 +51,7 @@ def _selu_with_inplace(input, inplace=False):
 
 
 def _rrelu(input, lower=1.0 / 8, upper=1.0 / 3, training=False, inplace=False):
-    if training:
-        # alpha = ivy.random_uniform(low=lower, high=upper)
-        # ToDo implement alpha correctly after fixing ivy.random_uniform
-        pass
-    else:
+    if not training:
         alpha = (lower + upper) / 2
     ret = ivy.subtract(
         ivy.relu(input), ivy.multiply(alpha, ivy.relu(ivy.negative(input)))
@@ -272,9 +268,7 @@ def hardsigmoid(input, inplace=False):
 def hardtanh(input, min_val=-1.0, max_val=1.0, inplace=False):
     less = ivy.where(ivy.less(input, min_val), min_val, input)
     ret = ivy.where(ivy.greater(input, max_val), max_val, less)
-    if inplace:
-        return ivy.inplace_update(input, ret)
-    return ret
+    return ivy.inplace_update(input, ret) if inplace else ret
 
 
 @to_ivy_arrays_and_back

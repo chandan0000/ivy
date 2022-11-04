@@ -26,18 +26,18 @@ def _wrap_function(function_name: str, static: bool) -> Callable:
     """
 
     def new_function(
-        *args,
-        key_chains=None,
-        to_apply=True,
-        prune_unapplied=False,
-        map_sequences=False,
-        out: Optional[ivy.Container] = None,
-        **kwargs
-    ):
+            *args,
+            key_chains=None,
+            to_apply=True,
+            prune_unapplied=False,
+            map_sequences=False,
+            out: Optional[ivy.Container] = None,
+            **kwargs
+        ):
         function = ivy.__dict__[function_name]
         data_idx = function.array_spec[0]
         if (
-            not (data_idx[0][0] == 0 and len(data_idx[0]) == 1)
+            (data_idx[0][0] != 0 or len(data_idx[0]) != 1)
             and args
             and ivy.is_ivy_container(args[0])
             and not static

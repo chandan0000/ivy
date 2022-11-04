@@ -63,9 +63,7 @@ def to_ivy(
      ret
         the input in its native framework form in the case of ivy.Array or instances.
     """
-    if nested:
-        return ivy.nested_map(x, _to_ivy, include_derived)
-    return _to_ivy(x)
+    return ivy.nested_map(x, _to_ivy, include_derived) if nested else _to_ivy(x)
 
 
 def args_to_ivy(

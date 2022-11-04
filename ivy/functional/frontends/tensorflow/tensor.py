@@ -10,7 +10,7 @@ class EagerTensor:
         if ivy.is_native_array(data):
             data = ivy.Array(data)
         else:
-            data = ivy.array(data) if not isinstance(data, ivy.Array) else data
+            data = data if isinstance(data, ivy.Array) else ivy.array(data)
         self.data = data
 
     def __repr__(self):
@@ -60,8 +60,7 @@ class EagerTensor:
             return self.data != 0
 
         temp = ivy.squeeze(ivy.asarray(self.data), axis=None)
-        shape = ivy.shape(temp)
-        if shape:
+        if shape := ivy.shape(temp):
             raise ValueError(
                 "The truth value of an array with more than one element is ambiguous. "
                 "Use a.any() or a.all()"

@@ -22,5 +22,4 @@ def cosine_similarity(x1, x2, *, dim=1, eps=1e-08):
     norm_mm, eps = torch_frontend.promote_types_of_torch_inputs(norm_mm, eps)
     denominator = ivy.maximum(norm_mm, eps)
 
-    cosine = numerator / denominator
-    return cosine
+    return numerator / denominator

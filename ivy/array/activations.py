@@ -82,13 +82,7 @@ class ArrayWithActivations(abc.ABC):
         """
         return ivy.sigmoid(self._data, out=out)
 
-    def softmax(
-        x: Union[ivy.Array, ivy.NativeArray],
-        /,
-        *,
-        axis: Optional[int] = None,
-        out: Optional[ivy.Array] = None,
-    ) -> ivy.Array:
+    def softmax(self, /, *, axis: Optional[int] = None, out: Optional[ivy.Array] = None) -> ivy.Array:
         """
         ivy.Array instance method variant of ivy.softmax. This method simply wraps the
         function, and so the docstring for ivy.softmax also applies to this method
@@ -116,7 +110,7 @@ class ArrayWithActivations(abc.ABC):
         >>> print(y)
         ivy.array([0.422, 0.155, 0.422])
         """
-        return ivy.softmax(x, axis=axis, out=out)
+        return ivy.softmax(self, axis=axis, out=out)
 
     def softplus(
         self: ivy.Array,

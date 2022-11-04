@@ -42,9 +42,6 @@ def unique_all(
         nan_idx = jnp.where(jnp.isnan(x.flatten()))[0]
 
         indices = jnp.concatenate((indices[:-1], nan_idx), axis=0).astype(indices.dtype)
-    else:
-        pass
-
     return Results(
         values.astype(x.dtype), indices, jnp.reshape(inverse_indices, x.shape), counts
     )

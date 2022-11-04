@@ -1,5 +1,6 @@
 """Collection of Numpy activation functions, wrapped to fit Ivy syntax and signature."""
 
+
 from typing import Optional, Union
 
 # global
@@ -10,7 +11,7 @@ from ivy.functional.backends.numpy.helpers import _handle_0_dim_output
 
 try:
     from scipy.special import erf
-except (ImportError, ModuleNotFoundError):
+except ImportError:
     erf = None
 
 
@@ -43,9 +44,11 @@ def gelu(
 
 
 def sigmoid(x: np.ndarray, /, *, out: Optional[np.ndarray] = None) -> np.ndarray:
-    if not ivy.is_array(x):
-        return np.asarray(1 / (1 + np.exp(-x)))
-    return np.asarray(1 / (1 + np.exp(-x))).astype(x.dtype)
+    return (
+        np.asarray(1 / (1 + np.exp(-x))).astype(x.dtype)
+        if ivy.is_array(x)
+        else np.asarray(1 / (1 + np.exp(-x)))
+    )
 
 
 def softmax(

@@ -1,5 +1,6 @@
 """Collection of device Ivy functions."""
 
+
 # global
 import os
 import gc
@@ -25,10 +26,10 @@ from ivy.func_wrapper import (
 )
 from ivy.exceptions import handle_exceptions
 
-default_device_stack = list()
-dev_handles = dict()
-split_factors = dict()
-max_chunk_sizes = dict()
+default_device_stack = []
+dev_handles = {}
+split_factors = {}
+max_chunk_sizes = {}
 
 
 # Extra #
@@ -143,7 +144,7 @@ def get_all_ivy_arrays_on_dev(
     {139740789224448:ivy.array([1,0,2])},
     """
     device = ivy.as_ivy_dev(device)
-    all_arrays = list()
+    all_arrays = []
     for obj in gc.get_objects():
         # noinspection PyBroadException
         try:
@@ -151,7 +152,7 @@ def get_all_ivy_arrays_on_dev(
                 all_arrays.append(obj)
         except Exception:
             pass
-    return ivy.Container(dict(zip([str(id(a)) for a in all_arrays], all_arrays)))
+    return ivy.Container(dict(zip([id(a) for a in all_arrays], all_arrays)))
 
 
 @handle_exceptions
@@ -466,8 +467,7 @@ def total_mem_on_dev(device: Union[ivy.Device, ivy.NativeDevice], /) -> float:
         return psutil.virtual_memory().total / 1e9
     else:
         raise ivy.exceptions.IvyException(
-            'Invalid device string input, must be on the form "gpu:idx" or "cpu", '
-            "but found {}".format(device)
+            f'Invalid device string input, must be on the form "gpu:idx" or "cpu", but found {device}'
         )
 
 
@@ -525,8 +525,7 @@ def used_mem_on_dev(
         return (vm.total - vm.available) / 1e9
     else:
         raise ivy.exceptions.IvyException(
-            'Invalid device string input, must be on the form "gpu:idx" or "cpu", '
-            "but found {}".format(device)
+            f'Invalid device string input, must be on the form "gpu:idx" or "cpu", but found {device}'
         )
 
 
@@ -585,8 +584,7 @@ def percent_used_mem_on_dev(
         return (1 - (vm.available / vm.total)) * 100
     else:
         raise ivy.exceptions.IvyException(
-            'Invalid device string input, must be on the form "gpu:idx" or "cpu", '
-            "but found {}".format(device)
+            f'Invalid device string input, must be on the form "gpu:idx" or "cpu", but found {device}'
         )
 
 
@@ -629,8 +627,7 @@ def dev_util(device: Union[ivy.Device, ivy.NativeDevice], /) -> float:
         return pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
     else:
         raise ivy.exceptions.IvyException(
-            'Invalid device string input, must be on the form "gpu:idx" or "cpu", '
-            "but found {}".format(device)
+            f'Invalid device string input, must be on the form "gpu:idx" or "cpu", but found {device}'
         )
 
 
@@ -767,11 +764,7 @@ def default_device(
 
     """
     if ivy.exists(device):
-        if as_native is True:
-            return ivy.as_native_dev(device)
-        elif as_native is False:
-            return ivy.as_ivy_dev(device)
-        return device
+        return ivy.as_native_dev(device) if as_native else ivy.as_ivy_dev(device)
     as_native = ivy.default(as_native, False)
     if ivy.exists(item):
         if isinstance(item, (list, tuple, dict)) and len(item) == 0:
@@ -783,9 +776,7 @@ def default_device(
         ret = "gpu:0" if ivy.gpu_is_available() else "cpu"
     else:
         ret = default_device_stack[-1]
-    if as_native:
-        return ivy.as_native_dev(ret)
-    return ivy.as_ivy_dev(ret)
+    return ivy.as_native_dev(ret) if as_native else ivy.as_ivy_dev(ret)
 
 
 @handle_exceptions
@@ -1031,7 +1022,7 @@ def split_func_call(
             max_chunk_size = max_chunk_sizes[shape_key]
         else:
             max_chunk_size = 0
-        max_dim = max([inp.shape[inp_ax] for inp, inp_ax in zip(inputs, input_axes)])
+        max_dim = max(inp.shape[inp_ax] for inp, inp_ax in zip(inputs, input_axes))
         if max_dim > max_chunk_size:
             max_chunk_sizes[shape_key] = max_dim
             max_chunk_size = max_dim
@@ -1086,9 +1077,12 @@ def split_func_call(
         return sums_or_means[0] if len(sums_or_means) == 1 else tuple(sums_or_means)
     rets = [func(*i) for i in zip(*inputs_split)]
     rets = [
-        tuple([post_fn(r) for r in ret]) if isinstance(ret, tuple) else (post_fn(ret),)
+        tuple(post_fn(r) for r in ret)
+        if isinstance(ret, tuple)
+        else (post_fn(ret),)
         for ret in rets
     ]
+
     num_outputs = len(rets[0])
     if output_axes is None:
         output_axes = [input_axes[0]] * num_outputs
@@ -1113,9 +1107,8 @@ def _is_valid_devices_attributes(fn: Callable) -> bool:
                     and backend_str in fn_unsupported_devices
                 ):
                     return False
-        else:
-            if isinstance(fn_unsupported_devices, tuple):
-                return False
+        elif isinstance(fn_unsupported_devices, tuple):
+            return False
     return True
 
 

@@ -39,17 +39,17 @@ def argmin(
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     ret = torch.argmin(x, axis=axis, keepdim=keepdims, out=out)
-    # The returned array must have the default array index data type.
     if dtype is not None:
-        if dtype not in (torch.int32, torch.int64):
-            return torch.tensor(ret, dtype=torch.int32)
-        else:
-            return torch.tensor(ret, dtype=dtype)
+        return (
+            torch.tensor(ret, dtype=torch.int32)
+            if dtype not in (torch.int32, torch.int64)
+            else torch.tensor(ret, dtype=dtype)
+        )
+
+    if ret.dtype not in (torch.int32, torch.int64):
+        return torch.tensor(ret, dtype=torch.int32)
     else:
-        if ret.dtype not in (torch.int32, torch.int64):
-            return torch.tensor(ret, dtype=torch.int32)
-        else:
-            return torch.tensor(ret, dtype=ret.dtype)
+        return torch.tensor(ret, dtype=ret.dtype)
 
 
 argmin.support_native_out = True
@@ -76,9 +76,7 @@ def nonzero(
             res = res[:, :size]
 
     res = tuple(res)
-    if as_tuple:
-        return res
-    return torch.stack(res, dim=1)
+    return res if as_tuple else torch.stack(res, dim=1)
 
 
 def where(

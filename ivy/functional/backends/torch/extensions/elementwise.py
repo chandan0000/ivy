@@ -175,9 +175,8 @@ def nan_to_num(
 ) -> torch.Tensor:
     if copy:
         return torch.nan_to_num(x, nan=nan, posinf=posinf, neginf=neginf, out=out)
-    else:
-        x = torch.nan_to_num(x, nan=nan, posinf=posinf, neginf=neginf)
-        return x
+    x = torch.nan_to_num(x, nan=nan, posinf=posinf, neginf=neginf)
+    return x
 
     
 def logaddexp2(

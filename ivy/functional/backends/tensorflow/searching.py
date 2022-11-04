@@ -37,17 +37,17 @@ def argmin(
     out: Optional[Union[tf.Tensor, tf.Variable]] = None,
 ) -> Union[tf.Tensor, tf.Variable]:
     ret = x.numpy().argmin(axis=axis, keepdims=keepdims)
-    # The returned array must have the default array index data type.
     if dtype is not None:
-        if dtype not in (tf.int32, tf.int64):
-            return tf.convert_to_tensor(ret, dtype=tf.int32)
-        else:
-            return tf.convert_to_tensor(ret, dtype=dtype)
+        return (
+            tf.convert_to_tensor(ret, dtype=tf.int32)
+            if dtype not in (tf.int32, tf.int64)
+            else tf.convert_to_tensor(ret, dtype=dtype)
+        )
+
+    if ret.dtype not in (tf.int32, tf.int64):
+        return tf.convert_to_tensor(ret, dtype=tf.int32)
     else:
-        if ret.dtype not in (tf.int32, tf.int64):
-            return tf.convert_to_tensor(ret, dtype=tf.int32)
-        else:
-            return tf.convert_to_tensor(ret, dtype=ret.dtype)
+        return tf.convert_to_tensor(ret, dtype=ret.dtype)
 
 
 def nonzero(
@@ -61,9 +61,7 @@ def nonzero(
     res = tf.experimental.numpy.nonzero(x)
 
     if size is not None:
-        dtype = tf.int64
-        if isinstance(fill_value, float):
-            dtype = tf.float64
+        dtype = tf.float64 if isinstance(fill_value, float) else tf.int64
         res = tf.cast(res, dtype)
 
         diff = size - res[0].shape[0]
@@ -72,9 +70,7 @@ def nonzero(
         elif diff < 0:
             res = tf.slice(res, [0, 0], [-1, size])
 
-    if as_tuple:
-        return tuple(res)
-    return tf.stack(res, axis=1)
+    return tuple(res) if as_tuple else tf.stack(res, axis=1)
 
 
 def where(
@@ -102,7 +98,6 @@ def argwhere(
     where_x = tf.experimental.numpy.where(x)
     if len(where_x) == 1:
         return tf.expand_dims(where_x[0], -1)
-    res = tf.experimental.numpy.concatenate(
+    return tf.experimental.numpy.concatenate(
         [tf.expand_dims(item, -1) for item in where_x], -1
     )
-    return res

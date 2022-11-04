@@ -121,9 +121,7 @@ def can_cast(from_: Union[jnp.dtype, JaxArray], to: jnp.dtype, /) -> bool:
     to = str(to)
     if "bool" in from_ and (("int" in to) or ("float" in to)):
         return False
-    if "int" in from_ and "float" in to:
-        return False
-    return jnp.can_cast(from_, to)
+    return False if "int" in from_ and "float" in to else jnp.can_cast(from_, to)
 
 
 @_handle_nestable_dtype_info
@@ -157,15 +155,15 @@ def as_ivy_dtype(dtype_in: Union[jnp.dtype, str]) -> ivy.Dtype:
 
 
 def as_native_dtype(dtype_in: Union[jnp.dtype, str]) -> jnp.dtype:
-    if not isinstance(dtype_in, str):
-        return dtype_in
-    return native_dtype_dict[ivy.Dtype(dtype_in)]
+    return (
+        native_dtype_dict[ivy.Dtype(dtype_in)]
+        if isinstance(dtype_in, str)
+        else dtype_in
+    )
 
 
 def dtype(x: JaxArray, as_native: bool = False) -> ivy.Dtype:
-    if as_native:
-        return ivy.to_native(x).dtype
-    return as_ivy_dtype(x.dtype)
+    return ivy.to_native(x).dtype if as_native else as_ivy_dtype(x.dtype)
 
 
 def dtype_bits(dtype_in: Union[jnp.dtype, str]) -> int:

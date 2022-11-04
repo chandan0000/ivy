@@ -124,9 +124,7 @@ def can_cast(from_: Union[np.dtype, np.ndarray], to: np.dtype, /) -> bool:
     to = str(to)
     if "bool" in from_ and (("int" in to) or ("float" in to)):
         return False
-    if "int" in from_ and "float" in to:
-        return False
-    return np.can_cast(from_, to)
+    return False if "int" in from_ and "float" in to else np.can_cast(from_, to)
 
 
 @_handle_nestable_dtype_info
@@ -175,9 +173,7 @@ def as_native_dtype(dtype_in: Union[np.dtype, str]) -> np.dtype:
 
 
 def dtype(x: np.ndarray, as_native: bool = False) -> ivy.Dtype:
-    if as_native:
-        return ivy.to_native(x).dtype
-    return as_ivy_dtype(x.dtype)
+    return ivy.to_native(x).dtype if as_native else as_ivy_dtype(x.dtype)
 
 
 def dtype_bits(dtype_in: Union[np.dtype, str]) -> int:

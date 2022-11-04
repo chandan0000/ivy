@@ -24,11 +24,11 @@ def cholesky(
     x: JaxArray, /, *, upper: bool = False, out: Optional[JaxArray] = None
 ) -> JaxArray:
     if not upper:
-        ret = jnp.linalg.cholesky(x)
-    else:
-        axes = list(range(len(x.shape) - 2)) + [len(x.shape) - 1, len(x.shape) - 2]
-        ret = jnp.transpose(jnp.linalg.cholesky(jnp.transpose(x, axes=axes)), axes=axes)
-    return ret
+        return jnp.linalg.cholesky(x)
+    axes = list(range(len(x.shape) - 2)) + [len(x.shape) - 1, len(x.shape) - 2]
+    return jnp.transpose(
+        jnp.linalg.cholesky(jnp.transpose(x, axes=axes)), axes=axes
+    )
 
 
 def cross(
@@ -60,7 +60,7 @@ def diagonal(
     axis2: int = -1,
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
-    if not x.dtype == bool and not jnp.issubdtype(x.dtype, jnp.integer):
+    if x.dtype != bool and not jnp.issubdtype(x.dtype, jnp.integer):
         ret = jnp.diagonal(x, offset, axis1, axis2)
         ret_edited = jnp.diagonal(
             x.at[1 / x == -jnp.inf].set(-jnp.inf), offset, axis1, axis2
@@ -114,14 +114,9 @@ def inv(
 
     if jnp.any(jnp.linalg.det(x.astype("float64")) == 0):
         return x
-    else:
-        if adjoint is False:
-            ret = jnp.linalg.inv(x)
-            return ret
-        else:
-            x = jnp.transpose(x)
-            ret = jnp.linalg.inv(x)
-            return ret
+    if adjoint:
+        x = jnp.transpose(x)
+    return jnp.linalg.inv(x)
 
 
 def matmul(
@@ -133,9 +128,9 @@ def matmul(
     transpose_b: bool = False,
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
-    if transpose_a is True:
+    if transpose_a:
         x1 = jnp.transpose(x1)
-    if transpose_b is True:
+    if transpose_b:
         x2 = jnp.transpose(x2)
     return jnp.matmul(x1, x2)
 
@@ -249,11 +244,7 @@ def pinv(
     rtol: Optional[Union[float, Tuple[float]]] = None,
     out: Optional[JaxArray] = None,
 ) -> JaxArray:
-    if rtol is None:
-        ret = jnp.linalg.pinv(x)
-    else:
-        ret = jnp.linalg.pinv(x, rtol)
-    return ret
+    return jnp.linalg.pinv(x) if rtol is None else jnp.linalg.pinv(x, rtol)
 
 
 @with_unsupported_dtypes({"0.3.14 and below": ("float16", "bfloat16")}, backend_version)
@@ -277,20 +268,18 @@ def slogdet(
 def solve(x1: JaxArray, x2: JaxArray, /, *, out: Optional[JaxArray] = None) -> JaxArray:
     expanded_last = False
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
-    if len(x2.shape) <= 1:
-        if x2.shape[-1] == x1.shape[-1]:
-            expanded_last = True
-            x2 = jnp.expand_dims(x2, axis=1)
+    if len(x2.shape) <= 1 and x2.shape[-1] == x1.shape[-1]:
+        expanded_last = True
+        x2 = jnp.expand_dims(x2, axis=1)
 
     # if any of the arrays are empty
     is_empty_x1 = x1.size == 0
     is_empty_x2 = x2.size == 0
     if is_empty_x1 or is_empty_x2:
-        for i in range(len(x1.shape) - 2):
+        for _ in range(len(x1.shape) - 2):
             x2 = jnp.expand_dims(x2, axis=0)
         output_shape = list(jnp.broadcast_shapes(x1.shape[:-2], x2.shape[:-2]))
-        output_shape.append(x2.shape[-2])
-        output_shape.append(x2.shape[-1])
+        output_shape.extend((x2.shape[-2], x2.shape[-1]))
         ret = jnp.array([]).reshape(output_shape)
     else:
         output_shape = tuple(jnp.broadcast_shapes(x1.shape[:-2], x2.shape[:-2]))
@@ -369,11 +358,11 @@ def vector_norm(
     else:
         jnp_normalized_vector = jnp.linalg.norm(x, ord, axis, keepdims)
 
-    if jnp_normalized_vector.shape == ():
-        ret = jnp.expand_dims(jnp_normalized_vector, 0)
-    else:
-        ret = jnp_normalized_vector
-    return ret
+    return (
+        jnp.expand_dims(jnp_normalized_vector, 0)
+        if jnp_normalized_vector.shape == ()
+        else jnp_normalized_vector
+    )
 
 
 # Extra #

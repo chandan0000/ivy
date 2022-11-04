@@ -12,8 +12,9 @@ def _get_reduction_func(reduction):
         ret = ivy.sum
     else:
         raise ivy.exceptions.IvyException(
-            "{} is not a valid value for reduction".format(reduction)
+            f"{reduction} is not a valid value for reduction"
         )
+
     return ret
 
 
@@ -23,12 +24,11 @@ def _legacy_get_string(size_average, reduce):
     if reduce is None:
         reduce = True
     if size_average and reduce:
-        ret = "mean"
+        return "mean"
     elif reduce:
-        ret = "sum"
+        return "sum"
     else:
-        ret = "none"
-    return ret
+        return "none"
 
 
 def _get_reduction(reduction, size_average=None, reduce=None):
@@ -58,20 +58,17 @@ def _get_reduction_string(size_average, reduce):
     if reduce is None:
         reduce = True
     if size_average and reduce:
-        ret = "mean"
+        return "mean"
     elif reduce:
-        ret = "sum"
+        return "sum"
     else:
-        ret = "none"
-    return ret
+        return "none"
 
 
 def _apply_reduction(reduction, size_average, reduce, to_reduce):
     if size_average is not None or reduce is not None:
         reduction = _get_reduction_string(size_average, reduce)
-        return _get_reduction_method(reduction, to_reduce)
-    else:
-        return _get_reduction_method(reduction, to_reduce)
+    return _get_reduction_method(reduction, to_reduce)
 
 
 @to_ivy_arrays_and_back
@@ -135,6 +132,4 @@ def smooth_l1_loss(
             _diff_abs - 0.5 * beta,
         )
 
-    ret = reduction(loss)
-
-    return ret
+    return reduction(loss)

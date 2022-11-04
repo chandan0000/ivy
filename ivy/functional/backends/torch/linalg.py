@@ -23,17 +23,14 @@ def cholesky(
 ) -> torch.Tensor:
     if not upper:
         return torch.linalg.cholesky(x, out=out)
-    else:
-        ret = torch.transpose(
-            torch.linalg.cholesky(
-                torch.transpose(x, dim0=len(x.shape) - 1, dim1=len(x.shape) - 2)
-            ),
-            dim0=len(x.shape) - 1,
-            dim1=len(x.shape) - 2,
-        )
-        if ivy.exists(out):
-            return ivy.inplace_update(out, ret)
-        return ret
+    ret = torch.transpose(
+        torch.linalg.cholesky(
+            torch.transpose(x, dim0=len(x.shape) - 1, dim1=len(x.shape) - 2)
+        ),
+        dim0=len(x.shape) - 1,
+        dim1=len(x.shape) - 2,
+    )
+    return ivy.inplace_update(out, ret) if ivy.exists(out) else ret
 
 
 cholesky.support_native_out = True
@@ -139,15 +136,15 @@ def inv(
         if ivy.exists(out):
             return ivy.inplace_update(out, ret)
     else:
-        if adjoint is False:
+        if not adjoint:
             ret = torch.inverse(x, out=out)
-            return ret
         else:
             x = torch.t(x)
             ret = torch.inverse(x, out=out)
             if ivy.exists(out):
                 return ivy.inplace_update(out, ret)
-            return ret
+
+        return ret
 
 
 inv.support_native_out = True
@@ -163,9 +160,9 @@ def matmul(
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
 
-    if transpose_a is True:
+    if transpose_a:
         x1 = torch.t(x1)
-    if transpose_b is True:
+    if transpose_b:
         x2 = torch.t(x2)
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     return torch.matmul(x1, x2, out=out)
@@ -292,19 +289,17 @@ def solve(
 ) -> torch.Tensor:
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     expanded_last = False
-    if len(x2.shape) <= 1:
-        if x2.shape[-1] == x1.shape[-1]:
-            expanded_last = True
-            x2 = torch.unsqueeze(x2, dim=1)
+    if len(x2.shape) <= 1 and x2.shape[-1] == x1.shape[-1]:
+        expanded_last = True
+        x2 = torch.unsqueeze(x2, dim=1)
 
     is_empty_x1 = x1.nelement() == 0
     is_empty_x2 = x2.nelement() == 0
     if is_empty_x1 or is_empty_x2:
-        for i in range(len(x1.shape) - 2):
+        for _ in range(len(x1.shape) - 2):
             x2 = torch.unsqueeze(x2, dim=0)
         output_shape = list(torch.broadcast_shapes(x1.shape[:-2], x2.shape[:-2]))
-        output_shape.append(x2.shape[-2])
-        output_shape.append(x2.shape[-1])
+        output_shape.extend((x2.shape[-2], x2.shape[-1]))
         ret = torch.Tensor([])
         ret = torch.reshape(ret, output_shape)
     else:
@@ -356,13 +351,11 @@ def tensordot(
     # type conversion to one that torch.tensordot can work with
     x1, x2 = x1.type(torch.float32), x2.type(torch.float32)
 
-    # handle tensordot for axes==0
-    # otherwise call with axes
-    if axes == 0:
-        ret = (x1.reshape(x1.size() + (1,) * x2.dim()) * x2).type(dtype)
-    else:
-        ret = torch.tensordot(x1, x2, dims=axes).type(dtype)
-    return ret
+    return (
+        (x1.reshape(x1.size() + (1,) * x2.dim()) * x2).type(dtype)
+        if axes == 0
+        else torch.tensordot(x1, x2, dims=axes).type(dtype)
+    )
 
 
 @with_unsupported_dtypes({"1.11.0 and below": ("float16", "bfloat16")}, backend_version)
@@ -407,11 +400,11 @@ def vector_norm(
     out: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     py_normalized_vector = torch.linalg.vector_norm(x, ord, axis, keepdims, out=out)
-    if py_normalized_vector.shape == ():
-        ret = torch.unsqueeze(py_normalized_vector, 0)
-    else:
-        ret = py_normalized_vector
-    return ret
+    return (
+        torch.unsqueeze(py_normalized_vector, 0)
+        if py_normalized_vector.shape == ()
+        else py_normalized_vector
+    )
 
 
 vector_norm.support_native_out = True

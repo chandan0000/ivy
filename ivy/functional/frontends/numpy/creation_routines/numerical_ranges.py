@@ -34,9 +34,7 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0):
 def meshgrid(*xi, copy=True, sparse=False, indexing="xy"):
     # Todo: add sparse check
     ret = ivy.meshgrid(*xi, indexing=indexing)
-    if copy:
-        return [ivy.copy_array(x) for x in ret]
-    return ret
+    return [ivy.copy_array(x) for x in ret] if copy else ret
 
 
 class nd_grid:
@@ -86,10 +84,7 @@ class nd_grid:
         current_arr = total_arr
         while current_arr != 0:
             arr = self._shape_array(self.grids[current_arr - 1], current_arr, total_arr)
-            if self.sparse:
-                self.grids[current_arr - 1] = arr
-            else:
-                self.grids[current_arr - 1] = arr[0]
+            self.grids[current_arr - 1] = arr if self.sparse else arr[0]
             current_arr -= 1
 
     def _init_array(self, array, current, total):
@@ -116,14 +111,10 @@ class nd_grid:
         return array
 
     def _ret_grids(self):
-        is_float = False
-        for grid in self.grids:
-            if ivy.is_float_dtype(grid):
-                is_float = True
-                break
+        is_float = any(ivy.is_float_dtype(grid) for grid in self.grids)
         # ogrid
         if self.sparse:
-            for i in range(0, len(self.grids)):
+            for i in range(len(self.grids)):
                 self.grids[i] = (
                     ivy.native_array(self.grids[i], dtype="float64")
                     if is_float

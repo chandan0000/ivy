@@ -18,14 +18,14 @@ torch_scatter = None
 
 
 def _parse_index(indices, ndims):
-    ind = list()
+    ind = []
     for so in indices:
-        pre = list()
+        pre = []
         for s in so:
             if s == -1:
                 break
             pre.append(s.item())
-        post = list()
+        post = []
         for s in reversed(so):
             if s == -1:
                 break
@@ -42,9 +42,7 @@ def _parse_index(indices, ndims):
 
 def is_native_array(x, /, *, exclusive=False):
     if isinstance(x, torch.Tensor):
-        if exclusive and x.requires_grad:
-            return False
-        return True
+        return not exclusive or not x.requires_grad
     return False
 
 
@@ -77,48 +75,45 @@ def to_numpy(
     if isinstance(x, (float, int, bool)):
         return x
     elif isinstance(x, np.ndarray):
-        if copy:
-            return x.copy()
-        else:
-            return x
+        return x.copy() if copy else x
     elif torch.is_tensor(x):
-        if copy:
-            if x.dtype is torch.bfloat16:
-                default_dtype = ivy.default_float_dtype(as_native=True)
-                if default_dtype is torch.bfloat16:
-                    x = x.to(torch.float32)
-                else:
-                    x = x.to(default_dtype)
-                return x.detach().cpu().numpy().astype("bfloat16")
-            return x.detach().cpu().numpy()
-        else:
+        if not copy:
             raise ivy.exceptions.IvyException(
                 "Overwriting the same address is not supported for torch."
             )
+        if x.dtype is torch.bfloat16:
+            default_dtype = ivy.default_float_dtype(as_native=True)
+            x = (
+                x.to(torch.float32)
+                if default_dtype is torch.bfloat16
+                else x.to(default_dtype)
+            )
+
+            return x.detach().cpu().numpy().astype("bfloat16")
+        return x.detach().cpu().numpy()
     elif isinstance(x, list):
         return [ivy.to_numpy(u) for u in x]
     raise ivy.exceptions.IvyException("Expected a pytorch tensor.")
 
 
 def to_scalar(x: torch.Tensor, /) -> Number:
-    if isinstance(x, (float, int)):
-        return x
-    return x.item()
+    return x if isinstance(x, (float, int)) else x.item()
 
 
 def to_list(x: torch.Tensor, /) -> list:
     if isinstance(x, np.ndarray):
         return x.tolist()
     elif torch.is_tensor(x):
-        if x.dtype is torch.bfloat16:
-            default_dtype = ivy.default_float_dtype(as_native=True)
-            if default_dtype is torch.bfloat16:
-                x = x.to(torch.float32)
-            else:
-                x = x.to(default_dtype)
-            return x.detach().cpu().numpy().astype("bfloat16").tolist()
-        else:
+        if x.dtype is not torch.bfloat16:
             return x.detach().cpu().numpy().tolist()
+        default_dtype = ivy.default_float_dtype(as_native=True)
+        x = (
+            x.to(torch.float32)
+            if default_dtype is torch.bfloat16
+            else x.to(default_dtype)
+        )
+
+        return x.detach().cpu().numpy().astype("bfloat16").tolist()
     raise ivy.exceptions.IvyException("Expected a pytorch tensor.")
 
 
@@ -142,7 +137,7 @@ def gather(
     else:
         for b in range(batch_dims):
             if b == 0:
-                zip_list = [(p, i) for p, i in zip(params, indices)]
+                zip_list = list(zip(params, indices))
             else:
                 zip_list = [
                     (p, i) for z in [zip(p1, i1) for p1, i1 in zip_list] for p, i in z
@@ -154,17 +149,14 @@ def gather(
             ]
             result.append(r)
         result = torch.stack(result)
-        result = result.reshape([*params.shape[0:batch_dims], *result.shape[1:]])
+        result = result.reshape([*params.shape[:batch_dims], *result.shape[1:]])
     return result
 
 
 def gather_nd_helper(params, indices):
     indices_shape = indices.shape
     params_shape = params.shape
-    if len(indices.shape) == 0:
-        num_index_dims = 1
-    else:
-        num_index_dims = indices_shape[-1]
+    num_index_dims = 1 if len(indices.shape) == 0 else indices_shape[-1]
     result_dim_sizes_list = [
         reduce(mul, params_shape[i + 1 :], 1) for i in range(len(params_shape) - 1)
     ] + [1]
@@ -172,7 +164,7 @@ def gather_nd_helper(params, indices):
     implicit_indices_factor = int(result_dim_sizes[num_index_dims - 1].item())
     flat_params = torch.reshape(params, (-1,))
     new_shape = [1] * (len(indices_shape) - 1) + [num_index_dims]
-    indices_scales = torch.reshape(result_dim_sizes[0:num_index_dims], new_shape)
+    indices_scales = torch.reshape(result_dim_sizes[:num_index_dims], new_shape)
     indices_for_flat_tiled = torch.reshape(
         torch.sum(indices * indices_scales, -1, keepdim=True), (-1, 1)
     ).repeat(*[1, implicit_indices_factor])
@@ -182,10 +174,10 @@ def gather_nd_helper(params, indices):
     indices_for_flat = indices_for_flat_tiled + implicit_indices
     flat_indices_for_flat = torch.reshape(indices_for_flat, (-1,)).type(torch.long)
     flat_gather = torch.gather(flat_params, 0, flat_indices_for_flat)
-    res = torch.reshape(
-        flat_gather, list(indices_shape[:-1]) + list(params_shape[num_index_dims:])
+    return torch.reshape(
+        flat_gather,
+        list(indices_shape[:-1]) + list(params_shape[num_index_dims:]),
     )
-    return res
 
 
 def gather_nd(
@@ -204,7 +196,7 @@ def gather_nd(
     else:
         for b in range(batch_dims):
             if b == 0:
-                zip_list = [(p, i) for p, i in zip(params, indices)]
+                zip_list = list(zip(params, indices))
             else:
                 zip_list = [
                     (p, i) for z in [zip(p1, i1) for p1, i1 in zip_list] for p, i in z
@@ -214,7 +206,7 @@ def gather_nd(
             r = gather_nd_helper(p, i)
             result.append(r)
         result = torch.stack(result)
-        result = result.reshape([*params.shape[0:batch_dims], *result.shape[1:]])
+        result = result.reshape([*params.shape[:batch_dims], *result.shape[1:]])
     return result
 
 
@@ -260,19 +252,18 @@ def inplace_update(
     ensure_in_backend: bool = False,
 ) -> ivy.Array:
     ivy.assertions.check_inplace_sizes_valid(x, val)
-    if ivy.is_array(x) and ivy.is_array(val):
-        (x_native, val_native), _ = ivy.args_to_native(x, val)
-        x_native.data = val_native
-        if ivy.is_ivy_array(x):
-            x.data = x_native
-
-        else:
-            x = ivy.to_ivy(x_native)
-        if ensure_in_backend:
-            x._data = val_native
-        return x
-    else:
+    if not ivy.is_array(x) or not ivy.is_array(val):
         return val
+    (x_native, val_native), _ = ivy.args_to_native(x, val)
+    x_native.data = val_native
+    if ivy.is_ivy_array(x):
+        x.data = x_native
+
+    else:
+        x = ivy.to_ivy(x_native)
+    if ensure_in_backend:
+        x._data = val_native
+    return x
 
 
 def inplace_variables_supported():
@@ -308,7 +299,7 @@ def scatter_flat(
         ivy.assertions.check_equal(len(target.shape), 1)
         ivy.assertions.check_equal(target.shape[0], size)
     dtype = updates.dtype
-    if reduction in ["sum", "replace"]:
+    if reduction in {"sum", "replace"}:
         initial_val = torch.tensor(0).type(dtype)
     elif reduction == "min":
         initial_val = torch.tensor(1e12).type(dtype)
@@ -316,14 +307,10 @@ def scatter_flat(
         initial_val = torch.tensor(-1e12).type(dtype)
     else:
         raise ivy.exceptions.IvyException(
-            'reduction is {}, but it must be one of "sum", "min" or "max"'.format(
-                reduction
-            )
+            f'reduction is {reduction}, but it must be one of "sum", "min" or "max"'
         )
-    if target_given:
-        output = out
-    else:
-        output = torch.ones([size], dtype=dtype) * initial_val
+
+    output = out if target_given else torch.ones([size], dtype=dtype) * initial_val
     global torch_scatter
     if torch_scatter is None:
         try:
@@ -339,13 +326,15 @@ def scatter_flat(
         res = torch_scatter.scatter(
             updates, indices.type(torch.int64), out=output, reduce=reduction
         )
-    if not target_given:
-        return torch.where(
+    return (
+        res
+        if target_given
+        else torch.where(
             res == initial_val,
             torch.zeros([size], dtype=updates.dtype),
             res,
         )
-    return res
+    )
 
 
 @with_unsupported_dtypes(
@@ -474,7 +463,7 @@ def scatter_nd(
     result_dim_sizes = torch.tensor(result_dim_sizes_list)
     implicit_indices_factor = int(result_dim_sizes[num_index_dims - 1].item())
     flat_result_size = reduce(mul, shape, 1)
-    if reduction in ["sum", "replace"]:
+    if reduction in {"sum", "replace"}:
         initial_val = torch.tensor(0).type(dtype)
     elif reduction == "min":
         if dtype.is_floating_point:
@@ -488,17 +477,16 @@ def scatter_nd(
             initial_val = int(max(torch.iinfo(dtype).min, -1e12))
     else:
         raise ivy.exceptions.IvyException(
-            'reduction is {}, but it must be one of "sum", "min" or "max"'.format(
-                reduction
-            )
+            f'reduction is {reduction}, but it must be one of "sum", "min" or "max"'
         )
+
     if target_given:
         flat_output = torch.reshape(out._data, (flat_result_size,))
     else:
         flat_output = torch.ones(flat_result_size, dtype=dtype) * initial_val
     flat_updates = torch.reshape(updates, (-1,))
     new_shape = [1] * (len(indices_shape) - 1) + [num_index_dims]
-    indices_scales = torch.reshape(result_dim_sizes[0:num_index_dims], new_shape)
+    indices_scales = torch.reshape(result_dim_sizes[:num_index_dims], new_shape)
     indices_for_flat_tiled = torch.reshape(
         torch.sum(indices * indices_scales, -1, keepdim=True), (-1, 1)
     ).repeat(*[1, implicit_indices_factor])
@@ -532,9 +520,7 @@ def scatter_nd(
             flat_scatter,
         )
     res = torch.reshape(flat_scatter, list(shape))
-    if ivy.exists(out):
-        return ivy.inplace_update(out, res)
-    return res
+    return ivy.inplace_update(out, res) if ivy.exists(out) else res
 
 
 scatter_nd.support_native_out = True

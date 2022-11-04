@@ -170,66 +170,67 @@ def rot90(input, k, dims):
         total_dims,
         2,
         allow_equal=True,
-        message="expected total dims >= 2, but got total dims = " + str(total_dims),
+        message=f"expected total dims >= 2, but got total dims = {str(total_dims)}",
     )
+
 
     ivy.assertions.check_equal(
         total_rot_dims,
         2,
-        message="expected total rotation dims == 2, but got dims = "
-        + str(total_rot_dims),
+        message=f"expected total rotation dims == 2, but got dims = {total_rot_dims}",
     )
+
 
     ivy.assertions.check_equal(
         dims[0],
         dims[1],
         inverse=True,
-        message="expected rotation dims to be different, but got dim0 = "
-        + str(dims[0])
-        + " and dim1 = "
-        + str(dims[1]),
+        message=f"expected rotation dims to be different, but got dim0 = {str(dims[0])} and dim1 = {str(dims[1])}",
     )
+
 
     ivy.assertions.check_equal(
         ivy.abs(dims[0] - dims[1]),
         total_dims,
         inverse=True,
-        message="expected rotation dims to be different, but got dim0 = "
-        + str(dims[0])
-        + " and dim1 = "
-        + str(dims[1]),
+        message=f"expected rotation dims to be different, but got dim0 = {str(dims[0])} and dim1 = {str(dims[1])}",
     )
+
 
     # range of dims
     ivy.assertions.check_less(
         dims[0],
         total_dims,
-        message="Rotation dim0 out of range, dim0 = " + str(dims[0]),
+        message=f"Rotation dim0 out of range, dim0 = {str(dims[0])}",
     )
+
 
     ivy.assertions.check_greater(
         dims[0],
         -total_dims,
         allow_equal=True,
-        message="Rotation dim0 out of range, dim0 = " + str(dims[0]),
+        message=f"Rotation dim0 out of range, dim0 = {str(dims[0])}",
     )
+
 
     ivy.assertions.check_less(
         dims[1],
         total_dims,
-        message="Rotation dim1 out of range, dim1 = " + str(dims[1]),
+        message=f"Rotation dim1 out of range, dim1 = {str(dims[1])}",
     )
+
 
     ivy.assertions.check_greater(
         dims[1],
         -total_dims,
         allow_equal=True,
-        message="Rotation dim1 out of range, dim1 = " + str(dims[1]),
+        message=f"Rotation dim1 out of range, dim1 = {str(dims[1])}",
     )
 
-    k = (4 + (k % 4)) % 4
+
     new_axes = list(range(total_dims))
     new_axes[min(dims)], new_axes[max(dims)] = max(dims), min(dims)
+    k = (4 + (k % 4)) % 4
     if k == 1:
         flipped = ivy.flip(input, axis=dims[1])
         return ivy.permute_dims(flipped, axes=new_axes, out=flipped)
@@ -264,7 +265,7 @@ def einsum(equation, *operands):
 def _valid_shapes(input, weight, bias, stride, padding, groups, transpose=False):
 
     in_channels = input.shape[1]
-    out_channels = weight.shape[0] if not transpose else weight.shape[1] * groups
+    out_channels = weight.shape[1] * groups if transpose else weight.shape[0]
 
     ivy.assertions.check_equal(
         in_channels % groups, 0, message="in_channels must be divisible by groups"
